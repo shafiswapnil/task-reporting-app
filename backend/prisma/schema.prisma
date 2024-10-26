@@ -19,13 +19,16 @@ model Developer {
 }
 
 model Task {
-  id          Int       @id @default(autoincrement())
-  developerId Int
-  project     String
-  target      String
-  status      String
-  date        DateTime
-  developer   Developer @relation("DeveloperToTasks", fields: [developerId], references: [id])
+  id              Int        @id @default(autoincrement())
+  developerId     Int
+  date            DateTime
+  project         String
+  role            String
+  team            String
+  targetsGiven    String
+  targetsAchieved String
+  status          String
+  developer       Developer  @relation("DeveloperToTasks", fields: [developerId], references: [id])
 }
 
 model Admin {
