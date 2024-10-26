@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import developerRoutes from './routes/developers.js';
 import taskRoutes from './routes/tasks.js';
 import adminRoutes from './routes/admin.js';
+import reportRoutes from './routes/report.js';
 import { PrismaClient } from '@prisma/client';
 
 // Load environment variables
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/developers', developerRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/admins', adminRoutes);
+app.use('/api/reports', adminRoutes);
 
 // Home route for testing
 app.get('/', (req, res) => {

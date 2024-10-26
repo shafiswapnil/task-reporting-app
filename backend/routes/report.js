@@ -1,17 +1,18 @@
 // Import required modules
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import authMiddleware from '../middleware/authMiddleware.js';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// GET /reports/:type - Generate reports
-router.get('/:type', authMiddleware, async (req, res) => {
+// GET /:type - Generate reports
+router.get('/:type', async (req, res) => {
   const { type } = req.params;
+
   try {
+    // Fetch all tasks with developer details
     let filteredTasks = await prisma.task.findMany({
       include: {
         developer: true,
@@ -40,6 +41,7 @@ router.get('/:type', authMiddleware, async (req, res) => {
       return res.status(400).json({ msg: 'Invalid report type. Use daily, weekly, or monthly.' });
     }
 
+    // Generate PDF report
     const doc = new jsPDF();
     doc.text(`Tasks Report - ${type}`, 20, 10);
     doc.autoTable({
@@ -55,9 +57,10 @@ router.get('/:type', authMiddleware, async (req, res) => {
         task.status,
       ]),
     });
-    const pdfData = doc.output();
+    const pdfData = doc.output('arraybuffer');
     res.setHeader('Content-Type', 'application/pdf');
-    res.send(pdfData);
+    res.setHeader('Content-Disposition', `inline; filename="${type}_tasks_report.pdf"`);
+    res.send(Buffer.from(pdfData));
   } catch (err) {
     console.error('Error generating report:', err.message);
     res.status(500).send('Server error');
