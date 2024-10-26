@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST / - Add a new task
 router.post('/', authMiddleware, async (req, res) => {
-  const { developerId, date, project, targetsGiven, targetsAchieved, status } = req.body;
+  const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = req.body;
   try {
     // Check if developer exists
     const developer = await prisma.developer.findUnique({ where: { id: developerId } });
@@ -18,7 +18,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Create new task
     const task = await prisma.task.create({
-      data: { developerId, date, project, targetsGiven, targetsAchieved, status },
+      data: { developerId, date, project, role, team, targetsGiven, targetsAchieved, status },
     });
     res.status(201).json(task);
   } catch (err) {
@@ -65,7 +65,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // PUT /:id - Update task
 router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { developerId, date, project, targetsGiven, targetsAchieved, status } = req.body;
+  const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = req.body;
   try {
     let task = await prisma.task.findUnique({ where: { id: parseInt(id) } });
     if (!task) {
@@ -73,7 +73,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
     task = await prisma.task.update({
       where: { id: parseInt(id) },
-      data: { developerId, date, project, targetsGiven, targetsAchieved, status },
+      data: { developerId, date, project, role, team, targetsGiven, targetsAchieved, status },
     });
     res.json(task);
   } catch (err) {

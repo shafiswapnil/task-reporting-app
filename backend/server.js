@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import developerRoutes from './routes/developers.js';
+import taskRoutes from './routes/tasks.js';
 import { PrismaClient } from '@prisma/client';
 
 // Load environment variables
@@ -22,6 +23,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/developers', developerRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Home route for testing
 app.get('/', (req, res) => {
