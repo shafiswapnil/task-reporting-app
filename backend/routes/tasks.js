@@ -8,24 +8,42 @@ import 'jspdf-autotable';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// POST / - Add a new task
-router.post('/', authMiddleware, async (req, res) => {
-  const { developerId, date, project, targetsGiven, targetsAchieved, status } = req.body;
+// GET /user - Get tasks for the logged-in user
+router.get('/user', authMiddleware, async (req, res, next) => {
   try {
-    // Check if developer exists
-    const developer = await prisma.developer.findUnique({ where: { id: developerId } });
-    if (!developer) {
-      return res.status(400).json({ msg: 'Developer not found' });
-    }
-
-    // Create new task
-    const task = await prisma.task.create({
-      data: { developerId, date, project, targetsGiven, targetsAchieved, status },
+    const tasks = await prisma.task.findMany({
+      where: {
+        developerId: req.user.id
+      },
+      orderBy: {
+        date: 'desc'
+      }
     });
-    res.status(201).json(task);
+    res.json(tasks);
   } catch (err) {
-    console.error('Error creating task:', err.message);
-    res.status(500).send('Server error');
+    next(err);
+  }
+});
+
+// POST / - Add a new task
+router.post('/', authMiddleware, async (req, res, next) => {
+  try {
+    const { date, project, targetsGiven, targetsAchieved, status } = req.body;
+    
+    const newTask = await prisma.task.create({
+      data: {
+        developerId: req.user.id,
+        date: new Date(date),
+        project,
+        targetsGiven,
+        targetsAchieved,
+        status
+      }
+    });
+    
+    res.status(201).json(newTask);
+  } catch (err) {
+    next(err);
   }
 });
 

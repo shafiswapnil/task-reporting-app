@@ -2,6 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import developerRoutes from './routes/developers.js';
 import taskRoutes from './routes/tasks.js';
@@ -33,6 +34,9 @@ app.use('/api/reports', reportRoutes);
 app.get('/', (req, res) => {
   res.send('Welcome to the Task Reporting API');
 });
+
+// Error handler
+app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5001;

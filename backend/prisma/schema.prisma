@@ -14,12 +14,15 @@ model Developer {
   password    String
   phoneNumber String?
   fullTime    Boolean
+  team        String   // "web" or "app"
+  projects    String[] // Array of project names
+  workingDays String[] // Array of working days
   joinedAt    DateTime @default(now())
   tasks       Task[]   @relation("DeveloperToTasks")
 }
 
 model Task {
-  id              Int        @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   developerId     Int
   date            DateTime
   project         String
@@ -28,7 +31,7 @@ model Task {
   targetsGiven    String
   targetsAchieved String
   status          String
-  developer       Developer  @relation("DeveloperToTasks", fields: [developerId], references: [id])
+  developer       Developer @relation("DeveloperToTasks", fields: [developerId], references: [id])
 }
 
 model Admin {

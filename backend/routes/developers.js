@@ -3,32 +3,49 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import authMiddleware from '../middleware/authMiddleware.js';
+import Joi from 'joi';
+import createHttpError from 'http-errors';
+import { apiLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const developerSchema = Joi.object({
+  name: Joi.string().required(),
+  email: Joi.string().email().required(),
+  phoneNumber: Joi.string(),
+  fullTime: Joi.boolean().required(),
+  team: Joi.string().valid('web', 'app').required(),
+  projects: Joi.array().items(Joi.string()).required(),
+  workingDays: Joi.array().items(Joi.string()).required(),
+  password: Joi.string().min(6).required()
+});
+
 // POST / - Add a new developer
-router.post('/', authMiddleware, async (req, res) => {
-  const { name, email, phoneNumber, fullTime, password } = req.body;
+router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
   try {
-    // Check if developer already exists
-    let developer = await prisma.developer.findUnique({ where: { email } });
-    if (developer) {
-      return res.status(400).json({ msg: 'Developer already exists' });
+    const { error } = developerSchema.validate(req.body);
+    if (error) {
+      throw createHttpError(400, error.details[0].message);
     }
 
-    // Encrypt password
+    const { name, email, phoneNumber, fullTime, team, projects, workingDays, password } = req.body;
+
+    const existingDeveloper = await prisma.developer.findUnique({ where: { email } });
+    if (existingDeveloper) {
+      throw createHttpError(409, 'Developer already exists');
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new developer
-    developer = await prisma.developer.create({
-      data: { name, email, phoneNumber, fullTime, password: hashedPassword },
+    const developer = await prisma.developer.create({
+      data: { name, email, phoneNumber, fullTime, team, projects, workingDays, password: hashedPassword },
     });
+
     res.status(201).json(developer);
   } catch (err) {
-    console.error('Error creating developer:', err.message);
-    res.status(500).send('Server error');
+    next(err);
   }
 });
 
