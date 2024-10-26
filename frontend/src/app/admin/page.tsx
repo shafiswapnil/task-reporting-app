@@ -1,5 +1,6 @@
 "use client";
 
+import withAuth from '../../components/withAuth';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
@@ -151,4 +152,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default withAuth(AdminDashboard, ['admin']);

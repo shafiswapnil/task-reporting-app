@@ -2,8 +2,6 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.BACKEND_URL;
-
 export default NextAuth({
   providers: [
     CredentialsProvider({
@@ -14,13 +12,13 @@ export default NextAuth({
       },
       async authorize(credentials) {
         try {
-          const res = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
+          const res = await axios.post(`${process.env.BACKEND_URL}/api/auth/login`, credentials);
           if (res.data) {
             return { ...res.data.user, accessToken: res.data.token };
           }
           return null;
         } catch (error) {
-          throw new Error(error.response?.data?.message || 'Authentication failed');
+          throw new Error(error.response?.data?.msg || 'Authentication failed');
         }
       }
     })
@@ -28,11 +26,13 @@ export default NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.accessToken = user.accessToken;
         token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
+      session.user.accessToken = token.accessToken;
       session.user.role = token.role;
       return session;
     }

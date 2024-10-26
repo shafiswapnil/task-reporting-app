@@ -74,59 +74,51 @@ router.post(
 );
 
 // POST /api/auth/login
-router.post(
-  '/login',
-  [
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password is required').exists()
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    // Check if user exists (could be admin or developer)
+    let user = await prisma.admin.findUnique({ where: { email } });
+    let role = 'admin';
+    
+    if (!user) {
+      user = await prisma.developer.findUnique({ where: { email } });
+      role = 'developer';
     }
 
-    const { email, password } = req.body;
-
-    try {
-      console.log('Trying to login admin:', email); // Debugging log
-
-      // Check if admin exists
-      let admin = await prisma.admin.findUnique({ where: { email } });
-      if (!admin) {
-        return res.status(400).json({ msg: 'Invalid Credentials' });
-      }
-
-      // Compare password
-      const isMatch = await bcrypt.compare(password, admin.password);
-      if (!isMatch) {
-        return res.status(400).json({ msg: 'Invalid Credentials' });
-      }
-
-      console.log('Admin logged in successfully:', admin); // Debugging log
-
-      // Return JWT
-      const payload = {
-        admin: {
-          id: admin.id
-        }
-      };
-
-      jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { expiresIn: 360000 },
-        (err, token) => {
-          if (err) throw err;
-          res.json({ token });
-        }
-      );
-    } catch (err) {
-      console.error('Error Details:', err.message); // Debugging log
-      res.status(500).send('Server error');
+    if (!user) {
+      return res.status(400).json({ msg: 'Invalid Credentials' });
     }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Invalid Credentials' });
+    }
+
+    // Create and return JWT
+    const payload = {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: role
+      }
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({ token, user: { id: user.id, email: user.email, role: role } });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
   }
-);
+});
 
 // POST /api/auth/register-developer
 router.post(
