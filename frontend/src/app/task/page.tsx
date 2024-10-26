@@ -1,16 +1,39 @@
-import { useState } from 'react';
+"use client";
+
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 
 const TaskSubmissionPage = () => {
   const { data: session } = useSession();
+  const userEmail = session?.user?.email || '';
   const [taskData, setTaskData] = useState({
-    project: '',
-    target: '',
-    status: 'Pending',
     date: '',
+    targetsGiven: '',
+    targetsAchieved: '',
+    status: 'Pending',
   });
   const [message, setMessage] = useState('');
+  const [submittedTasks, setSubmittedTasks] = useState([]);
+
+  useEffect(() => {
+    if (session && session.user && session.user.email) {
+      fetchSubmittedTasks();
+    }
+  }, [session]);
+
+  const fetchSubmittedTasks = async () => {
+    try {
+      const response = await axios.get('/api/tasks', {
+        params: {
+          developerEmail: userEmail,
+        },
+      });
+      setSubmittedTasks(response.data);
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -21,18 +44,19 @@ const TaskSubmissionPage = () => {
     e.preventDefault();
     setMessage('');
 
-    if (!session || !session.user || !session.user.email) {
+    if (!userEmail) {
       setMessage('You need to be logged in to submit a task.');
       return;
     }
 
     try {
-      const response = await axios.post('/api/tasks', {
-        developerEmail: session.user.email,
+      await axios.post('/api/tasks', {
+        developerEmail: userEmail,
         ...taskData,
       });
       setMessage('Task submitted successfully!');
-      setTaskData({ project: '', target: '', status: 'Pending', date: '' });
+      setTaskData({ date: '', targetsGiven: '', targetsAchieved: '', status: 'Pending' });
+      fetchSubmittedTasks();
     } catch (error) {
       setMessage('Failed to submit task. Please try again.');
     }
@@ -45,28 +69,42 @@ const TaskSubmissionPage = () => {
         {message && <p className="text-center">{message}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="project" className="block text-sm font-medium">
-              Project
+            <label htmlFor="date" className="block text-sm font-medium">
+              Date
             </label>
             <input
-              type="text"
-              id="project"
-              name="project"
-              value={taskData.project}
+              type="date"
+              id="date"
+              name="date"
+              value={taskData.date}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
             />
           </div>
           <div>
-            <label htmlFor="target" className="block text-sm font-medium">
-              Target
+            <label htmlFor="targetsGiven" className="block text-sm font-medium">
+              Targets Given
             </label>
             <input
               type="text"
-              id="target"
-              name="target"
-              value={taskData.target}
+              id="targetsGiven"
+              name="targetsGiven"
+              value={taskData.targetsGiven}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
+            />
+          </div>
+          <div>
+            <label htmlFor="targetsAchieved" className="block text-sm font-medium">
+              Targets Achieved
+            </label>
+            <input
+              type="text"
+              id="targetsAchieved"
+              name="targetsAchieved"
+              value={taskData.targetsAchieved}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
@@ -90,20 +128,6 @@ const TaskSubmissionPage = () => {
               <option value="Partially Completed">Partially Completed</option>
             </select>
           </div>
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium">
-              Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={taskData.date}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200"
-            />
-          </div>
           <button
             type="submit"
             className="w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300"
@@ -111,6 +135,20 @@ const TaskSubmissionPage = () => {
             Submit Task
           </button>
         </form>
+
+        <div className="mt-8">
+          <h3 className="text-xl font-bold">Submitted Tasks</h3>
+          <ul className="mt-4 space-y-2">
+            {submittedTasks.map((task: any, index: number) => (
+              <li key={index} className="p-4 bg-gray-200 rounded-md">
+                <p><strong>Date:</strong> {task.date}</p>
+                <p><strong>Targets Given:</strong> {task.targetsGiven}</p>
+                <p><strong>Targets Achieved:</strong> {task.targetsAchieved}</p>
+                <p><strong>Status:</strong> {task.status}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
