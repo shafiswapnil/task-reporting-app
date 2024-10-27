@@ -1,26 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 
-const LoginPage = () => {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    setIsDarkMode(savedTheme === 'dark');
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,78 +16,80 @@ const LoginPage = () => {
 
     try {
       const result = await signIn('credentials', {
-        redirect: false,
         email,
         password,
+        redirect: false,
       });
 
-      console.log('SignIn result:', result); // Add this line
-
       if (result?.error) {
-        setError(result.error);
-      } else if (result?.ok) {
-        router.push('/dashboard');
+        setError('Invalid credentials');
+        return;
       }
+
+      // Successful login
+      router.push('/dashboard');
+      router.refresh();
     } catch (error) {
-      console.error('SignIn error:', error);
-      setError('An unexpected error occurred');
+      console.error('Login error:', error);
+      setError('An error occurred during login');
     }
   };
 
   return (
-    <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}`}>
-      <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-900 rounded-md shadow-md">
-        <div className="flex justify-between">
-          <h2 className="text-3xl font-bold text-center">Login</h2>
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300 flex items-center"
-          >
-            {isDarkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
-          </button>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
         </div>
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
-            />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="text-red-500 text-center text-sm">{error}</div>
+          )}
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
-            />
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Sign in
+            </button>
           </div>
-          <button
-            type="submit"
-            className="w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300"
-          >
-            Login
-          </button>
         </form>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}

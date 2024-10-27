@@ -1,29 +1,38 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import axios from 'axios';
-import { NextAuthOptions } from 'next-auth';
 
-export const authOptions: NextAuthOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         try {
-          const res = await axios.post(`${process.env.BACKEND_URL}/api/auth/login`, credentials);
-          if (res.data && res.data.user) {
-            return { ...res.data.user, accessToken: res.data.token };
+          const res = await fetch(`${process.env.BACKEND_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(credentials),
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.accessToken) {
+            return {
+              ...data.user,
+              accessToken: data.accessToken,
+            };
           }
+
           return null;
         } catch (error) {
-          console.error('Login error:', error.response?.data);
+          console.error('Auth error:', error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -34,16 +43,19 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.user.accessToken = token.accessToken;
-      session.user.role = token.role;
+      if (session.user) {
+        session.user.accessToken = token.accessToken;
+        session.user.role = token.role;
+      }
       return session;
-    }
+    },
   },
   pages: {
     signIn: '/login',
   },
-};
-
-const handler = NextAuth(authOptions);
+  session: {
+    strategy: 'jwt',
+  },
+});
 
 export { handler as GET, handler as POST };

@@ -25,13 +25,13 @@ const UserDashboard = () => {
     try {
       const response = await fetch('/api/tasks');
       if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
+        throw new Error(`Failed to fetch tasks: ${response.status} ${response.statusText}`);
       }
       const data = await response.json();
       setTasks(data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      setError('Failed to fetch tasks. Please try again later.');
+      setError(error.message);
     }
   };
 
