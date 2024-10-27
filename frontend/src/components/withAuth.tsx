@@ -6,21 +6,19 @@ import { useEffect } from 'react';
 
 const withAuth = (WrappedComponent: React.ComponentType, allowedRoles?: string[]) => {
   return (props: any) => {
-    const router = useRouter();
     const { data: session, status } = useSession();
-    const isUser = !!session?.user;
-    const loading = status === "loading";
-    const hasRequiredRole = allowedRoles ? allowedRoles.includes(session?.user?.role as string) : true;
+    const router = useRouter();
 
     useEffect(() => {
-      if (!loading && !isUser) {
-        router.push("/login");
-      } else if (!loading && isUser && !hasRequiredRole) {
-        router.push("/unauthorized");
+      if (status === 'loading') return;
+      if (!session) {
+        router.push('/login');
+      } else if (allowedRoles && !allowedRoles.includes(session.user.role)) {
+        router.push('/unauthorized');
       }
-    }, [loading, isUser, hasRequiredRole, router]);
+    }, [session, status, router]);
 
-    if (loading || !isUser || !hasRequiredRole) {
+    if (status === 'loading') {
       return <div>Loading...</div>;
     }
 

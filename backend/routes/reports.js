@@ -8,14 +8,18 @@ import createHttpError from 'http-errors';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// GET /reports/:type - Generate reports
-router.get('/:type', apiLimiter, authMiddleware, async (req, res, next) => {
+// GET /reports - Generate reports
+router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
   try {
-    const { type } = req.params;
-    const { startDate, endDate, project } = req.query;
+    const { type, startDate, endDate, project } = req.query;
 
-    if (!['daily', 'weekly', 'monthly'].includes(type)) {
-      throw createHttpError(400, 'Invalid report type');
+    // Check if the user is an admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+
+    if (!type || !['daily', 'weekly', 'monthly'].includes(type)) {
+      throw createHttpError(400, 'Invalid or missing report type');
     }
 
     let tasks;
@@ -47,9 +51,19 @@ router.get('/:type', apiLimiter, authMiddleware, async (req, res, next) => {
       },
     });
 
-    res.json(tasks);
-  } catch (err) {
-    next(err);
+    // Format the data to match the frontend expectations
+    const formattedTasks = tasks.map(task => ({
+      date: task.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
+      developer: { name: task.developer.name },
+      project: task.project,
+      targetsGiven: task.targetsGiven,
+      targetsAchieved: task.targetsAchieved,
+      status: task.status,
+    }));
+
+    res.json(formattedTasks);
+  } catch (error) {
+    next(error);
   }
 });
 

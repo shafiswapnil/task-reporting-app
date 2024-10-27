@@ -26,24 +26,23 @@ router.get('/user', authMiddleware, async (req, res, next) => {
 });
 
 // POST / - Add a new task
-router.post('/', authMiddleware, async (req, res, next) => {
+router.post('/', authMiddleware, async (req, res) => {
+  const { developerId, project, targetsGiven, targetsAchieved, status, date } = req.body;
   try {
-    const { date, project, targetsGiven, targetsAchieved, status } = req.body;
-    
     const newTask = await prisma.task.create({
       data: {
-        developerId: req.user.id,
-        date: new Date(date),
+        developerId,
         project,
         targetsGiven,
         targetsAchieved,
-        status
-      }
+        status,
+        date: new Date(date),
+      },
     });
-    
     res.status(201).json(newTask);
   } catch (err) {
-    next(err);
+    console.error('Error creating task:', err);
+    res.status(500).json({ error: 'Failed to create task' });
   }
 });
 
@@ -57,8 +56,12 @@ router.get('/', authMiddleware, async (req, res) => {
     });
     res.json(tasks);
   } catch (err) {
-    console.error('Error fetching tasks:', err.message);
-    res.status(500).send('Server error');
+    console.error('Error fetching tasks:', err);
+    if (err.name === 'PrismaClientKnownRequestError') {
+      res.status(400).json({ error: 'Invalid query' });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 
@@ -90,6 +93,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
     let task = await prisma.task.findUnique({ where: { id: parseInt(id) } });
     if (!task) {
       return res.status(404).json({ msg: 'Task not found' });
+    }
+    if (task.developerId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ msg: 'Not authorized to update this task' });
     }
     task = await prisma.task.update({
       where: { id: parseInt(id) },

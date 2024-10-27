@@ -1,89 +1,92 @@
 "use client";
 
+import withAuth from '@/components/withAuth';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
-import withAuth from '@/components/withAuth';
 
 const AdminDashboard = () => {
-  const { data: session } = useSession();
   const [developers, setDevelopers] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [newDeveloper, setNewDeveloper] = useState({
-    name: '', email: '', phoneNumber: '', fullTime: true,
-    team: 'web', projects: [], workingDays: [], password: ''
-  });
+  const { data: session } = useSession();
   const [reportType, setReportType] = useState('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [project, setProject] = useState('');
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [developersResponse, tasksResponse] = await Promise.all([
+          fetch('/api/developers'),
+          fetch('/api/tasks')
+        ]);
+
+        if (!developersResponse.ok || !tasksResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const developersData = await developersResponse.json();
+        const tasksData = await tasksResponse.json();
+
+        setDevelopers(developersData);
+        setTasks(tasksData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
     if (session) {
-      fetchDevelopers();
-      fetchTasks();
+      fetchData();
     }
   }, [session]);
 
-  const fetchDevelopers = async () => {
-    try {
-      const response = await axios.get('/api/developers');
-      setDevelopers(response.data);
-    } catch (error) {
-      console.error('Failed to fetch developers:', error);
-    }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const response = await axios.get('/api/tasks');
-      setTasks(response.data);
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
-    }
-  };
-
-  const handleAddDeveloper = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post('/api/developers', newDeveloper);
-      setNewDeveloper({
-        name: '', email: '', phoneNumber: '', fullTime: true,
-        team: 'web', projects: [], workingDays: [], password: ''
-      });
-      fetchDevelopers();
-    } catch (error) {
-      console.error('Failed to add developer:', error);
-    }
-  };
-
   const generateReport = async () => {
     try {
-      const response = await axios.get(`/api/reports/${reportType}`, {
-        params: { startDate, endDate, project }
-      });
-      
-      const tasks = response.data;
+      // Construct the query string
+      const queryParams = new URLSearchParams({
+        type: reportType,
+        startDate,
+        endDate,
+        project,
+      }).toString();
 
+      const response = await fetch(`/api/reports?${queryParams}`);
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+      const data = await response.json();
+
+      // Generate PDF using jsPDF
       const doc = new jsPDF();
-      doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 10, 10);
-      
-      const tableColumn = ["Developer", "Date", "Project", "Targets Given", "Targets Achieved", "Status"];
-      const tableRows = tasks.map(task => [
-        task.developer.name,
-        new Date(task.date).toLocaleDateString(),
-        task.project,
-        task.targetsGiven,
-        task.targetsAchieved,
-        task.status
-      ]);
+      doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 15);
+      doc.text(`Project: ${project || 'All'}`, 14, 25);
+      doc.text(`Period: ${startDate} to ${endDate}`, 14, 35);
 
-      doc.autoTable(tableColumn, tableRows, { startY: 20 });
-      doc.save(`${reportType}_report.pdf`);
+      // Add table to PDF
+      doc.autoTable({
+        head: [['Date', 'Developer', 'Project', 'Targets Given', 'Targets Achieved', 'Status']],
+        body: data.map((task: any) => [
+          task.date,
+          task.developer.name,
+          task.project,
+          task.targetsGiven,
+          task.targetsAchieved,
+          task.status,
+        ]),
+        startY: 45,
+      });
+
+      // Save the PDF
+      doc.save(`${reportType}_report_${startDate}_to_${endDate}.pdf`);
+
+      // Optionally, you can set a success message in the state
+      // setMessage('Report generated successfully');
     } catch (error) {
-      console.error('Failed to generate report:', error);
+      console.error('Error generating report:', error);
+      // Optionally, you can set an error message in the state
+      // setError('Failed to generate report. Please try again.');
     }
   };
 
@@ -152,4 +155,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default withAuth(AdminDashboard, ['admin']);
