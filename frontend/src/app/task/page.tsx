@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { TaskStatus } from '@/types/task';
+import MissingReportsCalendar from '@/components/MissingReportsCalendar';
 
 const TaskSubmissionPage = () => {
   const { data: session, status } = useSession();
@@ -120,6 +121,12 @@ const TaskSubmissionPage = () => {
     'Partially Completed'
   ];
 
+  const handleDateSelect = (date: string) => {
+    setTask(prev => ({ ...prev, date }));
+    // Optionally scroll to the form
+    document.getElementById('taskForm')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}`}>
       <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-900 rounded-md shadow-md">
@@ -137,7 +144,7 @@ const TaskSubmissionPage = () => {
           </button>
         </div>
         {message && <p className="text-center">{message}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="taskForm" onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="date" className="block text-sm font-medium">
               Date
@@ -206,6 +213,11 @@ const TaskSubmissionPage = () => {
             Submit Task
           </button>
         </form>
+
+        <MissingReportsCalendar 
+          weekdays={weekdays} 
+          onDateSelect={handleDateSelect} 
+        />
 
         <div className="mt-8">
           <h3 className="text-xl font-bold">Submitted Tasks</h3>

@@ -27,22 +27,41 @@ router.get('/user', authMiddleware, async (req, res, next) => {
 
 // POST / - Add a new task
 router.post('/', authMiddleware, async (req, res) => {
-  const { developerId, project, targetsGiven, targetsAchieved, status, date } = req.body;
   try {
-    const newTask = await prisma.task.create({
+    const {
+      developerId,
+      date,
+      project,
+      role,
+      team,
+      targetsGiven,
+      targetsAchieved,
+      status
+    } = req.body;
+
+    const task = await prisma.task.create({
       data: {
-        developerId,
+        developerId: parseInt(developerId),
+        date: new Date(date),
         project,
+        role,
+        team,
         targetsGiven,
         targetsAchieved,
-        status,
-        date: new Date(date),
+        status // Prisma will validate this against the enum automatically
       },
+      include: {
+        developer: true // Include developer details in response
+      }
     });
-    res.status(201).json(newTask);
-  } catch (err) {
-    console.error('Error creating task:', err);
-    res.status(500).json({ error: 'Failed to create task' });
+
+    res.status(201).json(task);
+  } catch (error) {
+    console.error('Task creation error:', error);
+    res.status(400).json({ 
+      error: 'Failed to create task',
+      details: error.message 
+    });
   }
 });
 
@@ -173,6 +192,65 @@ router.get('/reports/:type', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error generating report:', err.message);
     res.status(500).send('Server error');
+  }
+});
+
+// GET /submission-status - Get task submission status for date range
+router.get('/submission-status', authMiddleware, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const developerId = req.user.id;
+
+    // Get all submitted tasks for the date range
+    const submittedTasks = await prisma.task.findMany({
+      where: {
+        developerId,
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
+      select: {
+        id: true,
+        date: true,
+      },
+    });
+
+    // Get developer's working days
+    const developer = await prisma.developer.findUnique({
+      where: { id: developerId },
+      select: { workingDays: true },
+    });
+
+    // Generate status for each working day in the range
+    const status = [];
+    const currentDate = new Date(startDate);
+    const endDateTime = new Date(endDate);
+
+    while (currentDate <= endDateTime) {
+      const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+      
+      // Only include working days
+      if (developer.workingDays.includes(dayName)) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const submittedTask = submittedTasks.find(
+          task => task.date.toISOString().split('T')[0] === dateStr
+        );
+
+        status.push({
+          date: dateStr,
+          isSubmitted: !!submittedTask,
+          taskId: submittedTask?.id,
+        });
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    res.json(status);
+  } catch (error) {
+    console.error('Error getting submission status:', error);
+    res.status(500).json({ error: 'Failed to get submission status' });
   }
 });
 

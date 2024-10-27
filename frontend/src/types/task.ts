@@ -15,6 +15,7 @@ export interface Task {
   developerId: number;
   team: string;
   role: string;
+  submittedAt: string;  // To track when the task was actually submitted
 }
 
 export interface NewTask {
@@ -25,4 +26,10 @@ export interface NewTask {
   status: TaskStatus;
   team: string;
   role: string;
+}
+
+export interface TaskSubmissionStatus {
+  date: string;
+  isSubmitted: boolean;
+  taskId?: number;  // Will be present if submitted
 }
