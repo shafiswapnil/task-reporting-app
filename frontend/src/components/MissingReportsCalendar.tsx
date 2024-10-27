@@ -83,7 +83,23 @@ const MissingReportsCalendar = ({ weekdays, onDateSelect }: MissingReportsCalend
   };
 
   if (loading) {
-    return <div>Loading submission status...</div>;
+    return (
+      <div className="mt-8">
+        <h3 className="text-xl font-bold mb-4">Report Status (Last 30 Days)</h3>
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!submissionStatus.length) {
+    return (
+      <div className="mt-8">
+        <h3 className="text-xl font-bold mb-4">Report Status (Last 30 Days)</h3>
+        <p className="text-gray-600 dark:text-gray-400">No submission data available</p>
+      </div>
+    );
   }
 
   return (
@@ -97,4 +113,3 @@ const MissingReportsCalendar = ({ weekdays, onDateSelect }: MissingReportsCalend
 };
 
 export default MissingReportsCalendar;
-

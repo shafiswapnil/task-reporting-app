@@ -22,7 +22,7 @@ model Developer {
 }
 
 model Task {
-  id              Int      @id @default(autoincrement())
+  id              Int         @id @default(autoincrement())
   developerId     Int
   date            DateTime
   project         String
@@ -30,8 +30,9 @@ model Task {
   team            String
   targetsGiven    String
   targetsAchieved String
-  status          TaskStatus @default(Pending)
-  developer       Developer @relation("DeveloperToTasks", fields: [developerId], references: [id])
+  status          TaskStatus  @default(Pending)
+  submittedAt     DateTime    @default(now())  // Add this field
+  developer       Developer   @relation("DeveloperToTasks", fields: [developerId], references: [id])
 
   @@index([developerId])
 }

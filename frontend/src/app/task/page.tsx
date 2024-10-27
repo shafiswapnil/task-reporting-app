@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { TaskStatus } from '@/types/task';
 import MissingReportsCalendar from '@/components/MissingReportsCalendar';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const TaskSubmissionPage = () => {
   const { data: session, status } = useSession();
@@ -19,6 +20,7 @@ const TaskSubmissionPage = () => {
   const [submittedTasks, setSubmittedTasks] = useState([]);
   const [weekdays, setWeekdays] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -86,6 +88,8 @@ const TaskSubmissionPage = () => {
       setMessage('Please fill in all required fields');
       return;
     }
+    
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/tasks', {
         method: 'POST',
@@ -110,6 +114,8 @@ const TaskSubmissionPage = () => {
     } catch (error) {
       console.error('Error submitting task:', error);
       setMessage('Failed to submit task. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -208,9 +214,12 @@ const TaskSubmissionPage = () => {
           </div>
           <button
             type="submit"
-            className="w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300"
+            disabled={isSubmitting}
+            className={`w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300 ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            Submit Task
+            {isSubmitting ? 'Submitting...' : 'Submit Task'}
           </button>
         </form>
 
@@ -242,4 +251,12 @@ const TaskSubmissionPage = () => {
   );
 };
 
-export default TaskSubmissionPage;
+const TaskSubmissionPageWrapper = () => {
+  return (
+    <ErrorBoundary>
+      <TaskSubmissionPage />
+    </ErrorBoundary>
+  );
+};
+
+export default TaskSubmissionPageWrapper;

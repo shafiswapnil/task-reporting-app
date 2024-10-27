@@ -29,7 +29,6 @@ router.get('/user', authMiddleware, async (req, res, next) => {
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const {
-      developerId,
       date,
       project,
       role,
@@ -39,28 +38,67 @@ router.post('/', authMiddleware, async (req, res) => {
       status
     } = req.body;
 
+    // Add input validation
+    if (!date || !project || !role || !team || !targetsGiven || !targetsAchieved || !status) {
+      return res.status(400).json({ 
+        error: 'Missing required fields' 
+      });
+    }
+
+    // Validate status enum
+    const validStatuses = ['Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        error: 'Invalid status value' 
+      });
+    }
+
+    // Check if task already exists for this date
+    const existingTask = await prisma.task.findFirst({
+      where: {
+        developerId: req.user.id,
+        date: new Date(date)
+      }
+    });
+
+    if (existingTask) {
+      return res.status(409).json({ 
+        error: 'Task already exists for this date' 
+      });
+    }
+
     const task = await prisma.task.create({
       data: {
-        developerId: parseInt(developerId),
+        developerId: req.user.id,
         date: new Date(date),
         project,
         role,
         team,
         targetsGiven,
         targetsAchieved,
-        status // Prisma will validate this against the enum automatically
+        status: status as TaskStatus,
+        submittedAt: new Date()
       },
       include: {
-        developer: true // Include developer details in response
+        developer: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
       }
     });
 
-    res.status(201).json(task);
+    res.status(201).json({
+      message: 'Task created successfully',
+      task
+    });
+
   } catch (error) {
     console.error('Task creation error:', error);
-    res.status(400).json({ 
+    res.status(500).json({ 
       error: 'Failed to create task',
-      details: error.message 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -199,38 +237,68 @@ router.get('/reports/:type', authMiddleware, async (req, res) => {
 router.get('/submission-status', authMiddleware, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+
+    // Add input validation
+    if (!startDate || !endDate) {
+      return res.status(400).json({ 
+        error: 'Missing required query parameters: startDate and endDate' 
+      });
+    }
+
+    // Validate date format
+    const startDateTime = new Date(startDate);
+    const endDateTime = new Date(endDate);
+    
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      return res.status(400).json({ 
+        error: 'Invalid date format. Use YYYY-MM-DD' 
+      });
+    }
+
+    // Validate date range
+    if (endDateTime < startDateTime) {
+      return res.status(400).json({ 
+        error: 'endDate must be after startDate' 
+      });
+    }
+
     const developerId = req.user.id;
+
+    // Get developer first to verify existence
+    const developer = await prisma.developer.findUnique({
+      where: { id: developerId },
+      select: { workingDays: true },
+    });
+
+    if (!developer) {
+      return res.status(404).json({ 
+        error: 'Developer not found' 
+      });
+    }
 
     // Get all submitted tasks for the date range
     const submittedTasks = await prisma.task.findMany({
       where: {
         developerId,
         date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
+          gte: startDateTime,
+          lte: endDateTime,
         },
       },
       select: {
         id: true,
         date: true,
+        submittedAt: true,
       },
-    });
-
-    // Get developer's working days
-    const developer = await prisma.developer.findUnique({
-      where: { id: developerId },
-      select: { workingDays: true },
     });
 
     // Generate status for each working day in the range
     const status = [];
-    const currentDate = new Date(startDate);
-    const endDateTime = new Date(endDate);
+    const currentDate = new Date(startDateTime);
 
     while (currentDate <= endDateTime) {
       const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
       
-      // Only include working days
       if (developer.workingDays.includes(dayName)) {
         const dateStr = currentDate.toISOString().split('T')[0];
         const submittedTask = submittedTasks.find(
@@ -241,16 +309,26 @@ router.get('/submission-status', authMiddleware, async (req, res) => {
           date: dateStr,
           isSubmitted: !!submittedTask,
           taskId: submittedTask?.id,
+          submittedAt: submittedTask?.submittedAt || null,
         });
       }
       
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    res.json(status);
+    res.json({
+      startDate: startDate,
+      endDate: endDate,
+      workingDays: developer.workingDays,
+      submissions: status
+    });
+
   } catch (error) {
     console.error('Error getting submission status:', error);
-    res.status(500).json({ error: 'Failed to get submission status' });
+    res.status(500).json({ 
+      error: 'Failed to get submission status',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
