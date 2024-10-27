@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-    }
+    setIsDarkMode(savedTheme === 'dark');
   }, []);
 
   useEffect(() => {
@@ -26,14 +26,23 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
 
-    const result = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-    });
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
 
-    if (result?.error) {
-      setError(result.error);
+      console.log('SignIn result:', result); // Add this line
+
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.ok) {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error('SignIn error:', error);
+      setError('An unexpected error occurred');
     }
   };
 

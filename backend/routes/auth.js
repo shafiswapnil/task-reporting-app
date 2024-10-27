@@ -76,7 +76,10 @@ router.post(
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+
   try {
+    console.log('Login attempt for:', email); // Add this line
+
     // Check if user exists (could be admin or developer)
     let user = await prisma.admin.findUnique({ where: { email } });
     let role = 'admin';
@@ -87,12 +90,14 @@ router.post('/login', async (req, res) => {
     }
 
     if (!user) {
+      console.log('User not found:', email); // Add this line
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('Invalid password for:', email); // Add this line
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
@@ -101,7 +106,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        role: role
+        role: role,
+        name: user.name // Include any other necessary fields
       }
     };
 
@@ -111,12 +117,20 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1h' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token, user: { id: user.id, email: user.email, role: role } });
+        res.json({ 
+          token, 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            role: role,
+            name: user.name // Include any other necessary fields
+          } 
+        });
       }
     );
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('Login error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
 

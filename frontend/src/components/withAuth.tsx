@@ -1,5 +1,7 @@
+'use client';
+
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 const withAuth = (WrappedComponent: React.ComponentType, allowedRoles?: string[]) => {
@@ -16,10 +18,10 @@ const withAuth = (WrappedComponent: React.ComponentType, allowedRoles?: string[]
       } else if (!loading && isUser && !hasRequiredRole) {
         router.push("/unauthorized");
       }
-    }, [loading, isUser, hasRequiredRole]);
+    }, [loading, isUser, hasRequiredRole, router]);
 
     if (loading || !isUser || !hasRequiredRole) {
-      return <div>Loading...</div>; // Or a proper loading component
+      return <div>Loading...</div>;
     }
 
     return <WrappedComponent {...props} />;
@@ -27,4 +29,3 @@ const withAuth = (WrappedComponent: React.ComponentType, allowedRoles?: string[]
 };
 
 export default withAuth;
-

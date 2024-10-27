@@ -1,6 +1,7 @@
 // Import required modules
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const prisma = new PrismaClient();
@@ -8,22 +9,33 @@ const router = express.Router();
 
 // POST /admins - Add a new admin
 router.post('/', authMiddleware, async (req, res) => {
-  const { name, email, phone, password } = req.body;
   try {
+    const { name, email, phone, password } = req.body;
+
     // Check if admin already exists
-    let admin = await prisma.admin.findUnique({ where: { email } });
-    if (admin) {
+    const existingAdmin = await prisma.admin.findUnique({ where: { email } });
+    if (existingAdmin) {
       return res.status(400).json({ msg: 'Admin already exists' });
     }
 
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     // Create new admin
-    admin = await prisma.admin.create({
-      data: { name, email, phone, password },
+    const newAdmin = await prisma.admin.create({
+      data: {
+        name,
+        email,
+        phone,
+        password: hashedPassword,
+      },
     });
-    res.status(201).json(admin);
+
+    res.status(201).json({ msg: 'Admin created successfully', admin: { id: newAdmin.id, name: newAdmin.name, email: newAdmin.email } });
   } catch (err) {
-    console.error('Error creating admin:', err.message);
-    res.status(500).send('Server error');
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 

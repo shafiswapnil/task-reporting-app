@@ -1,13 +1,11 @@
-import { SessionProvider } from 'next-auth/react';
-import type { AppProps } from 'next/app';
-import '../styles/globals.css';
+import { Providers } from './providers'
 
-function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider session={session}>
-      <Component {...pageProps} />
-    </SessionProvider>
-  );
+    <html lang="en">
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
 }
-
-export default MyApp;

@@ -1,11 +1,11 @@
 "use client";
 
-import withAuth from '../../components/withAuth';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
+import withAuth from '@/components/withAuth';
 
 const AdminDashboard = () => {
   const { data: session } = useSession();
@@ -152,4 +152,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default withAuth(AdminDashboard, ['admin']);
+export default AdminDashboard;
