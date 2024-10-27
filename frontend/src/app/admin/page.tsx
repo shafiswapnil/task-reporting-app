@@ -155,4 +155,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default withAuth(AdminDashboard, ['admin']);
+export default withAuth(AdminDashboard, { allowedRoles: ['admin'] });

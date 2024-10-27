@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { TaskStatus } from '@/types/task';
 
 const TaskSubmissionPage = () => {
   const { data: session, status } = useSession();
@@ -111,6 +112,14 @@ const TaskSubmissionPage = () => {
     }
   };
 
+  const taskStatusOptions: TaskStatus[] = [
+    'Completed',
+    'Unfinished',
+    'Pending',
+    'Dependent',
+    'Partially Completed'
+  ];
+
   return (
     <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}`}>
       <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-900 rounded-md shadow-md">
@@ -175,18 +184,19 @@ const TaskSubmissionPage = () => {
             <label htmlFor="status" className="block text-sm font-medium">
               Status
             </label>
-            <select
-              id="status"
-              name="status"
-              value={task.status}
+            <select 
+              name="status" 
+              value={task.status} 
               onChange={handleChange}
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
+              className="form-select mt-1 block w-full"
+              required
             >
-              <option value="Pending">Pending</option>
-              <option value="Completed">Completed</option>
-              <option value="Unfinished">Unfinished</option>
-              <option value="Dependent">Dependent</option>
-              <option value="Partially Completed">Partially Completed</option>
+              <option value="">Select Status</option>
+              {taskStatusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
           <button

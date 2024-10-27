@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import type { Task, NewTask } from '@/types/task';
 
 const UserDashboard = () => {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const { data: session } = useSession();
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<NewTask>({
     date: new Date().toISOString().split('T')[0],
     project: '',
     targetsGiven: '',
     targetsAchieved: '',
-    status: 'Completed'
+    status: 'Pending'
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +61,7 @@ const UserDashboard = () => {
         project: '',
         targetsGiven: '',
         targetsAchieved: '',
-        status: 'Completed'
+        status: 'Pending'
       });
       await fetchTasks();
     } catch (error) {

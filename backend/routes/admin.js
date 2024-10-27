@@ -66,22 +66,31 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // PUT /admins/:id - Update admin
-router.put('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { name, email, phone, password } = req.body;
+router.put('/:id', authMiddleware, async (req, res, next) => {
   try {
-    let admin = await prisma.admin.findUnique({ where: { id: parseInt(id) } });
-    if (!admin) {
-      return res.status(404).json({ msg: 'Admin not found' });
+    const { id } = req.params;
+    const { name, email, phone, password } = req.body;
+
+    const updateData = {
+      name,
+      email,
+      phone
+    };
+
+    // Only hash and update password if provided
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateData.password = hashedPassword;
     }
-    admin = await prisma.admin.update({
+
+    const admin = await prisma.admin.update({
       where: { id: parseInt(id) },
-      data: { name, email, phone, password },
+      data: updateData,
     });
+
     res.json(admin);
   } catch (err) {
-    console.error('Error updating admin:', err.message);
-    res.status(500).send('Server error');
+    next(err);
   }
 });
 
