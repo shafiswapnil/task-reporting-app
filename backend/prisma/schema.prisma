@@ -31,7 +31,7 @@ model Task {
   targetsGiven    String
   targetsAchieved String
   status          TaskStatus  @default(Pending)
-  submittedAt     DateTime    @default(now())  // Add this field
+  submittedAt     DateTime    @default(now())  // Ensure this field is present
   developer       Developer   @relation("DeveloperToTasks", fields: [developerId], references: [id])
 
   @@index([developerId])

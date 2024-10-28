@@ -2,58 +2,36 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import authMiddleware from '../middleware/authMiddleware.js';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import Joi from 'joi';
+import createHttpError from 'http-errors';
+import { apiLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// GET /user - Get tasks for the logged-in user
-router.get('/user', authMiddleware, async (req, res, next) => {
-  try {
-    const tasks = await prisma.task.findMany({
-      where: {
-        developerId: req.user.id
-      },
-      orderBy: {
-        date: 'desc'
-      }
-    });
-    res.json(tasks);
-  } catch (err) {
-    next(err);
-  }
+// Define Joi schema for task validation
+const taskSchema = Joi.object({
+  date: Joi.date().iso().required(),
+  project: Joi.string().required(),
+  role: Joi.string().required(),
+  team: Joi.string().valid('web', 'app').required(),
+  targetsGiven: Joi.string().required(),
+  targetsAchieved: Joi.string().required(),
+  status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
 });
 
 // POST / - Add a new task
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', apiLimiter, authMiddleware, async (req, res) => {
   try {
-    const {
-      date,
-      project,
-      role,
-      team,
-      targetsGiven,
-      targetsAchieved,
-      status
-    } = req.body;
-
-    // Add input validation
-    if (!date || !project || !role || !team || !targetsGiven || !targetsAchieved || !status) {
-      return res.status(400).json({ 
-        error: 'Missing required fields' 
-      });
+    // Validate request body
+    const { error, value } = taskSchema.validate(req.body);
+    if (error) {
+      throw createHttpError(400, error.details[0].message);
     }
 
-    // Validate status enum
-    const validStatuses = ['Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        error: 'Invalid status value' 
-      });
-    }
+    const { date, project, role, team, targetsGiven, targetsAchieved, status } = value;
 
-    // Check if task already exists for this date
+    // Check if task already exists for this date and developer
     const existingTask = await prisma.task.findFirst({
       where: {
         developerId: req.user.id,
@@ -62,9 +40,7 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
     if (existingTask) {
-      return res.status(409).json({ 
-        error: 'Task already exists for this date' 
-      });
+      throw createHttpError(409, 'Task already exists for this date');
     }
 
     const task = await prisma.task.create({
@@ -76,7 +52,7 @@ router.post('/', authMiddleware, async (req, res) => {
         team,
         targetsGiven,
         targetsAchieved,
-        status: status as TaskStatus,
+        status, // Removed 'as TaskStatus'
         submittedAt: new Date()
       },
       include: {
@@ -96,140 +72,31 @@ router.post('/', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('Task creation error:', error);
-    res.status(500).json({ 
-      error: 'Failed to create task',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    if (error instanceof createHttpError.HttpError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to create task',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
 });
 
-// GET / - Get all tasks
-router.get('/', authMiddleware, async (req, res) => {
+// GET /user - Get tasks for the logged-in user
+router.get('/user', authMiddleware, async (req, res, next) => {
   try {
     const tasks = await prisma.task.findMany({
-      include: {
-        developer: true,
+      where: {
+        developerId: req.user.id
       },
+      orderBy: {
+        date: 'desc'
+      }
     });
     res.json(tasks);
   } catch (err) {
-    console.error('Error fetching tasks:', err);
-    if (err.name === 'PrismaClientKnownRequestError') {
-      res.status(400).json({ error: 'Invalid query' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
-
-// GET /:id - Get task by ID
-router.get('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const task = await prisma.task.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        developer: true,
-      },
-    });
-    if (!task) {
-      return res.status(404).json({ msg: 'Task not found' });
-    }
-    res.json(task);
-  } catch (err) {
-    console.error('Error fetching task:', err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// PUT /:id - Update task
-router.put('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { developerId, date, project, targetsGiven, targetsAchieved, status } = req.body;
-  try {
-    let task = await prisma.task.findUnique({ where: { id: parseInt(id) } });
-    if (!task) {
-      return res.status(404).json({ msg: 'Task not found' });
-    }
-    if (task.developerId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Not authorized to update this task' });
-    }
-    task = await prisma.task.update({
-      where: { id: parseInt(id) },
-      data: { developerId, date, project, targetsGiven, targetsAchieved, status },
-    });
-    res.json(task);
-  } catch (err) {
-    console.error('Error updating task:', err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// DELETE /:id - Delete task
-router.delete('/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const task = await prisma.task.findUnique({ where: { id: parseInt(id) } });
-    if (!task) {
-      return res.status(404).json({ msg: 'Task not found' });
-    }
-    await prisma.task.delete({ where: { id: parseInt(id) } });
-    res.json({ msg: 'Task deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting task:', err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// GET /reports/:type - Generate reports
-router.get('/reports/:type', authMiddleware, async (req, res) => {
-  const { type } = req.params;
-  try {
-    let filteredTasks = await prisma.task.findMany({
-      include: {
-        developer: true,
-      },
-    });
-
-    const today = new Date();
-    if (type === 'daily') {
-      const todayString = today.toISOString().split('T')[0];
-      filteredTasks = filteredTasks.filter((task) => task.date === todayString);
-    } else if (type === 'weekly') {
-      const weekAgo = new Date(today);
-      weekAgo.setDate(today.getDate() - 7);
-      filteredTasks = filteredTasks.filter((task) => {
-        const taskDate = new Date(task.date);
-        return taskDate >= weekAgo && taskDate <= today;
-      });
-    } else if (type === 'monthly') {
-      const monthAgo = new Date(today);
-      monthAgo.setMonth(today.getMonth() - 1);
-      filteredTasks = filteredTasks.filter((task) => {
-        const taskDate = new Date(task.date);
-        return taskDate >= monthAgo && taskDate <= today;
-      });
-    }
-
-    const doc = new jsPDF();
-    doc.text(`Tasks Report - ${type}`, 20, 10);
-    doc.autoTable({
-      head: [['Developer', 'Date', 'Project', 'Targets Given', 'Targets Achieved', 'Status']],
-      body: filteredTasks.map((task) => [
-        task.developer.name,
-        task.date,
-        task.project,
-        task.targetsGiven,
-        task.targetsAchieved,
-        task.status,
-      ]),
-    });
-    const pdfData = doc.output();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.send(pdfData);
-  } catch (err) {
-    console.error('Error generating report:', err.message);
-    res.status(500).send('Server error');
+    next(err);
   }
 });
 
@@ -308,7 +175,7 @@ router.get('/submission-status', authMiddleware, async (req, res) => {
         status.push({
           date: dateStr,
           isSubmitted: !!submittedTask,
-          taskId: submittedTask?.id,
+          taskId: submittedTask?.id || null,
           submittedAt: submittedTask?.submittedAt || null,
         });
       }

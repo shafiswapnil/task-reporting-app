@@ -3,7 +3,7 @@ export type TaskStatus =
   | 'Unfinished'
   | 'Pending'
   | 'Dependent'
-  | 'Partially Completed';
+  | 'PartiallyCompleted';
 
 export interface Task {
   id: number;
@@ -15,7 +15,7 @@ export interface Task {
   developerId: number;
   team: string;
   role: string;
-  submittedAt: string;  // Add this
+  submittedAt: string; // Added field
 }
 
 export interface NewTask {
@@ -32,4 +32,5 @@ export interface TaskSubmissionStatus {
   date: string;
   isSubmitted: boolean;
   taskId?: number;
+  submittedAt?: string | null;
 }
