@@ -163,20 +163,23 @@ const TaskSubmissionPage = () => {
             className="form-input mt-1 block w-full"
           />
         </div>
-        <div>
-          <label htmlFor="status" className="block text-sm font-medium">
-            Status
+        <div className="space-y-2">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+            Task Status
           </label>
-          <select 
-            name="status" 
-            value={task.status} 
+          <select
+            id="status"
+            name="status"
+            value={task.status}
             onChange={handleChange}
-            className="form-select mt-1 block w-full"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
           >
-            <option value="">Select Status</option>
             <option value="Pending">Pending</option>
             <option value="Completed">Completed</option>
+            <option value="Unfinished">Unfinished</option>
+            <option value="Dependent">Dependent</option>
+            <option value="PartiallyCompleted">Partially Completed</option>
           </select>
         </div>
         <button

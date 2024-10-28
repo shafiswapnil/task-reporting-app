@@ -6,12 +6,9 @@ export type TaskStatus =
   | 'PartiallyCompleted';
 
 export interface Task {
-  id: number;
-  developerId: number;
+  id?: number;
   date: string;
   project: string;
-  role: string;
-  team: string;
   targetsGiven: string;
   targetsAchieved: string;
   status: TaskStatus;

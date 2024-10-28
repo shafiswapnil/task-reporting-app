@@ -47,6 +47,14 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
     }
   };
 
+  const statusOptions: TaskStatus[] = [
+    'Pending',
+    'Completed',
+    'Unfinished',
+    'Dependent',
+    'PartiallyCompleted'
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -134,19 +142,23 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Status</label>
+      <div className="space-y-2">
+        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+          Status
+        </label>
         <select
+          id="status"
+          name="status"
           value={formData.status}
           onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         >
-          <option value="Completed">Completed</option>
-          <option value="Unfinished">Unfinished</option>
-          <option value="Pending">Pending</option>
-          <option value="Dependent">Dependent</option>
-          <option value="PartiallyCompleted">Partially Completed</option>
+          {statusOptions.map((status) => (
+            <option key={status} value={status}>
+              {status === 'PartiallyCompleted' ? 'Partially Completed' : status}
+            </option>
+          ))}
         </select>
       </div>
 

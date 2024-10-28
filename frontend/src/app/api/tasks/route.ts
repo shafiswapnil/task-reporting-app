@@ -14,7 +14,6 @@ export async function GET(req: Request) {
     const response = await fetch(backendUrl, {
       headers: {
         'Authorization': `Bearer ${token.accessToken}`,
-        'Content-Type': 'application/json',
       },
     });
 
@@ -26,18 +25,59 @@ export async function GET(req: Request) {
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('Tasks API error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch tasks',
-        details: error.message 
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
-  return handleRequest<Task>(req, 'POST');
+  try {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!token.email) {
+      return NextResponse.json({ error: 'User email not found' }, { status: 400 });
+    }
+
+    const data = await req.json();
+    const backendUrl = `${process.env.BACKEND_URL}/api/tasks`;
+
+    console.log('Submitting task with data and email:', {
+      ...data,
+      developerEmail: token.email // Change this line
+    });
+
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.accessToken}`,
+      },
+      body: JSON.stringify({
+        ...data,
+        developerEmail: token.email // Change this line
+      }),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('Backend error:', responseData);
+      return NextResponse.json(
+        { error: responseData.message || 'Failed to submit task' },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(responseData);
+  } catch (error: any) {
+    console.error('Task submission error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
 
 async function handleRequest<T>(req: Request, method: string): Promise<NextResponse<ApiResponse<T>>> {

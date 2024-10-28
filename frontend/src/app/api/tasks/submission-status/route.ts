@@ -30,6 +30,13 @@ export async function GET(req: Request) {
       }
     );
 
+    if (response.status === 429) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     if (!response.ok) {
       throw new Error(`Backend responded with status: ${response.status}`);
     }

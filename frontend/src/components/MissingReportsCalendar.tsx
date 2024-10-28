@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TaskSubmissionStatus } from '@/types/task';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface MissingReportsCalendarProps {
   weekdays: string[];
@@ -13,35 +14,39 @@ const MissingReportsCalendar: React.FC<MissingReportsCalendarProps> = ({
   const [loading, setLoading] = useState(true);
   const [submissionStatus, setSubmissionStatus] = useState<TaskSubmissionStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dates, setDates] = useState<Date[]>([]);
+  const debouncedDates = useDebounce(dates, 1000); // 1 second delay
 
   useEffect(() => {
-    fetchSubmissionStatus();
-  }, []);
+    const fetchSubmissionStatus = async () => {
+      try {
+        setLoading(true);
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
 
-  const fetchSubmissionStatus = async () => {
-    try {
-      setLoading(true);
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
+        const response = await fetch(
+          `/api/tasks/submission-status?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+        );
 
-      const response = await fetch(
-        `/api/tasks/submission-status?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
-      );
+        if (!response.ok) {
+          throw new Error('Failed to fetch submission status');
+        }
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch submission status');
+        const data = await response.json();
+        setSubmissionStatus(data);
+      } catch (error: any) {
+        setError(error.message);
+        console.error('Error fetching submission status:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      setSubmissionStatus(data);
-    } catch (error: any) {
-      setError(error.message);
-      console.error('Error fetching submission status:', error);
-    } finally {
-      setLoading(false);
+    if (debouncedDates.length > 0) {
+      fetchSubmissionStatus();
     }
-  };
+  }, [debouncedDates]);
 
   const isWorkingDay = (date: Date): boolean => {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });

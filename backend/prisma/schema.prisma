@@ -44,7 +44,7 @@ enum TaskStatus {
   Unfinished
   Pending
   Dependent
-  PartiallyCompleted // Note: Enum values can't contain spaces
+  PartiallyCompleted
 }
 
 model Admin {

@@ -11,11 +11,21 @@ const router = express.Router();
 
 // Validation schemas
 const developerTaskSchema = Joi.object({
-    date: Joi.date().iso().required(),
+    date: Joi.string().required(),
+    project: Joi.string().required(),
     targetsGiven: Joi.string().required(),
     targetsAchieved: Joi.string().required(),
-    status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
-});
+    status: Joi.string()
+        .valid(
+            'Completed',
+            'Unfinished',
+            'Pending',
+            'Dependent',
+            'PartiallyCompleted'
+        )
+        .required(),
+    developerEmail: Joi.string().email().required() // Add this line
+}).unknown(true);
 
 const adminTaskSchema = Joi.object({
     developerId: Joi.number().integer().positive().required(),
@@ -35,62 +45,48 @@ const adminTaskSchema = Joi.object({
 // Submit a new task (Developer)
 router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
     try {
-        // Validate request body
+        console.log('Received task data:', req.body);
+
         const { error, value } = developerTaskSchema.validate(req.body);
         if (error) {
             throw createHttpError(400, error.details[0].message);
         }
 
-        const { date, targetsGiven, targetsAchieved, status } = value;
+        const { date, project, targetsGiven, targetsAchieved, status, developerEmail } = value;
 
-        // Fetch developer's details to get project, role, and team
+        if (!developerEmail) {
+            throw createHttpError(400, 'Developer email is required');
+        }
+
         const developer = await prisma.developer.findUnique({
-            where: { id: req.user.id },
-            select: {
-                projects: true,
-                role: true,
-                team: true,
-            },
+            where: { 
+                email: developerEmail // Use email from request body
+            }
         });
 
         if (!developer) {
             throw createHttpError(404, 'Developer not found');
         }
 
-        // Assign project (selecting the first project for simplicity)
-        const project = developer.projects.length > 0 ? developer.projects[0] : 'Unknown Project';
-        const role = developer.role;
-        const team = developer.team;
+        console.log('Found developer:', developer); // Debug log
 
-        // Create the task
         const task = await prisma.task.create({
             data: {
-                developerId: req.user.id,
                 date: new Date(date),
                 project,
-                role,
-                team,
                 targetsGiven,
                 targetsAchieved,
                 status,
-                submittedAt: new Date(),
+                developerId: developer.id,
+                role: developer.role,
+                team: developer.team
             },
         });
 
-        res.status(201).json({
-            message: 'Task submitted successfully',
-            task,
-        });
+        res.status(201).json(task);
     } catch (error) {
-        console.error('Developer Task Submission Error:', error);
-        if (error instanceof createHttpError.HttpError) {
-            res.status(error.statusCode).json({ error: error.message });
-        } else {
-            res.status(500).json({
-                error: 'Failed to submit task',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-            });
-        }
+        console.error('Task creation error:', error);
+        next(error);
     }
 });
 
@@ -352,33 +348,29 @@ router.get('/submission-status', apiLimiter, authMiddleware, async (req, res) =>
 // Add this route after line 95
 router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
   try {
-    const { developerEmail } = req.query;
-    const whereClause = {};
-
-    if (developerEmail) {
-      whereClause.developer = {
-        email: developerEmail
-      };
-    } else {
-      whereClause.developerId = req.user.id;
-    }
-
     const tasks = await prisma.task.findMany({
-      where: whereClause,
-      orderBy: { date: 'desc' },
+      where: {
+        developer: {
+          email: req.user.email
+        }
+      },
       include: {
         developer: {
           select: {
             name: true,
-            email: true
+            email: true,
+            role: true,
+            team: true
           }
         }
+      },
+      orderBy: {
+        date: 'desc'
       }
     });
 
     res.json(tasks);
   } catch (error) {
-    console.error('Fetch Tasks Error:', error);
     next(error);
   }
 });

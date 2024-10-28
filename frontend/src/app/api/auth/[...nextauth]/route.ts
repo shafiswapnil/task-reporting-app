@@ -10,51 +10,52 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password required");
+        }
+
         try {
-          const res = await fetch(`${process.env.BACKEND_URL}/api/auth/login`, {
+          const res = await fetch(`${process.env.BACKEND_URL}/api/auth/developer-login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials),
+            headers: { "Content-Type": "application/json" }
           });
 
-          const data = await res.json();
+          const user = await res.json();
 
-          if (res.ok && data.token) {
-            return {
-              ...data.user,
-              accessToken: data.token,
-            };
+          if (res.ok && user) {
+            return user;
           }
-
+          
           return null;
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error("Auth error:", error);
           return null;
         }
-      },
-    }),
+      }
+    })
   ],
+  pages: {
+    signIn: '/login',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.accessToken = user.accessToken;
-        token.role = user.role;
+        token.accessToken = user.token;
+        token.email = user.email;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (token) {
         session.user.accessToken = token.accessToken;
-        session.user.role = token.role;
+        session.user.email = token.email;
       }
       return session;
-    },
-  },
-  pages: {
-    signIn: '/login',
+    }
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
   },
 });
 

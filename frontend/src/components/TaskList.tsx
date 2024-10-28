@@ -109,6 +109,23 @@ const TaskList: React.FC<TaskListProps> = ({ refreshTrigger, setRefreshTrigger }
     }
   });
 
+  const getStatusColor = (status: TaskStatus): string => {
+    switch (status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'Unfinished':
+        return 'bg-red-100 text-red-800';
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Dependent':
+        return 'bg-purple-100 text-purple-800';
+      case 'PartiallyCompleted':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   if (loading) {
     return <div>Loading tasks...</div>;
   }
@@ -194,7 +211,11 @@ const TaskList: React.FC<TaskListProps> = ({ refreshTrigger, setRefreshTrigger }
               <td className="py-2 px-4 capitalize">{task.team}</td>
               <td className="py-2 px-4">{task.targetsGiven}</td>
               <td className="py-2 px-4">{task.targetsAchieved}</td>
-              <td className="py-2 px-4">{task.status.replace(/([A-Z])/g, ' $1').trim()}</td>
+              <td className="py-2 px-4">
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                  {task.status === 'PartiallyCompleted' ? 'Partially Completed' : task.status}
+                </span>
+              </td>
               <td className="py-2 px-4">
                 <button
                   onClick={() => handleEdit(task)}
@@ -225,4 +246,3 @@ const TaskList: React.FC<TaskListProps> = ({ refreshTrigger, setRefreshTrigger }
 };
 
 export default TaskList;
-
