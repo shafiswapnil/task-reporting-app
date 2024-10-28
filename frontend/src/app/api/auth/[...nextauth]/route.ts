@@ -38,14 +38,14 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.accessToken = user.accessToken;
-        token.role = user.role;
+        token.role = user.role; // Ensure role is included
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.accessToken = token.accessToken;
-        session.user.role = token.role;
+        session.user.role = token.role; // Ensure role is included
       }
       return session;
     },

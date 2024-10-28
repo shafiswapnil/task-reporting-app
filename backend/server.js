@@ -21,7 +21,10 @@ const prisma = new PrismaClient();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Update this to your frontend URL
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes
@@ -38,7 +41,7 @@ app.get('/', (req, res) => {
 
 // 404 Handler
 app.use((req, res, next) => {
-    next(createHttpError(404, 'Route not found'));
+  next(createHttpError(404, 'Route not found'));
 });
 
 // Error handler
@@ -47,5 +50,5 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

@@ -9,10 +9,10 @@ import TaskList from '@/components/TaskList';
 import MissingReportsCalendar from '@/components/MissingReportsCalendar';
 import withAuth from '@/components/withAuth';
 import { Task } from '../../types/task';
-import { getTasks, deleteTask } from '../../services/api';
+import { getAdminTasks, deleteAdminTask, createAdminTask, updateAdminTask } from '../../services/api';
 
 const AdminDashboard = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [reportType, setReportType] = useState('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -22,23 +22,22 @@ const AdminDashboard = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string>('');
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
-    // Optionally, fetch initial data or perform other side effects
-  }, [session]);
+    if (status === 'authenticated' && session.user.role === 'admin') {
+      fetchTasks();
+    }
+  }, [session, status]);
 
   const fetchTasks = async () => {
     try {
-      const data = await getTasks();
+      const data = await getAdminTasks();
       setTasks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+    } catch (err: any) {
+      setError(err.message);
     }
   };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
 
   const handleEdit = (task: Task) => {
     setSelectedTask(task);
@@ -46,13 +45,11 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (taskId: number) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      try {
-        await deleteTask(taskId);
-        await fetchTasks();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete task');
-      }
+    try {
+      await deleteAdminTask(taskId);
+      fetchTasks();
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 

@@ -1,19 +1,83 @@
-// Add this to your existing api.ts file
-export const updateTask = async (taskId: number, taskData: UpdateTask): Promise<Task> => {
-  const response = await fetch(`${API_BASE_URL}/api/tasks/admin/${taskId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getToken()}` // Ensure you have a getToken function
-    },
-    body: JSON.stringify(taskData)
-  });
+import axios from 'axios';
+import { getSession } from 'next-auth/react';
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update task');
+// Create an Axios instance
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001/api',
+});
+
+// Request interceptor to add Authorization header
+api.interceptors.request.use(
+  async (config) => {
+    const session = await getSession();
+    if (session?.user?.accessToken) {
+      config.headers.Authorization = `Bearer ${session.user.accessToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  return response.json();
+// Response interceptor for handling errors globally (optional)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // You can handle specific status codes here
+    return Promise.reject(error);
+  }
+);
+
+// Export API methods
+
+export const getTasks = async () => {
+  const res = await api.get('/tasks');
+  return res.data;
 };
 
+export const deleteTask = async (taskId: number) => {
+  const res = await api.delete(`/tasks/${taskId}`);
+  return res.data;
+};
+
+export const createTask = async (taskData: any) => {
+  const res = await api.post('/tasks', taskData);
+  return res.data;
+};
+
+export const updateTask = async (taskId: number, taskData: any) => {
+  const res = await api.put(`/tasks/${taskId}`, taskData);
+  return res.data;
+};
+
+// Admin-specific API methods
+
+export const getAdminTasks = async () => {
+  const res = await api.get('/tasks/admin');
+  return res.data;
+};
+
+export const createAdminTask = async (taskData: any) => {
+  const res = await api.post('/tasks/admin', taskData);
+  return res.data;
+};
+
+export const updateAdminTask = async (taskId: number, taskData: any) => {
+  const res = await api.put(`/tasks/admin/${taskId}`, taskData);
+  return res.data;
+};
+
+export const deleteAdminTask = async (taskId: number) => {
+  const res = await api.delete(`/tasks/admin/${taskId}`);
+  return res.data;
+};
+
+export const getDeveloperDetails = async (email: string) => {
+  const res = await api.get(`/developers?email=${encodeURIComponent(email)}`);
+  return res.data;
+};
+
+// Additional API methods as needed
+
+export default api;
