@@ -6,9 +6,13 @@ interface MissingReportsCalendarProps {
   onDateSelect: (date: string) => void;
 }
 
-const MissingReportsCalendar = ({ weekdays, onDateSelect }: MissingReportsCalendarProps) => {
-  const [submissionStatus, setSubmissionStatus] = useState<TaskSubmissionStatus[]>([]);
+const MissingReportsCalendar: React.FC<MissingReportsCalendarProps> = ({
+  weekdays,
+  onDateSelect,
+}) => {
   const [loading, setLoading] = useState(true);
+  const [submissionStatus, setSubmissionStatus] = useState<TaskSubmissionStatus[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubmissionStatus();
@@ -16,7 +20,7 @@ const MissingReportsCalendar = ({ weekdays, onDateSelect }: MissingReportsCalend
 
   const fetchSubmissionStatus = async () => {
     try {
-      // Get the date range for the last 30 days
+      setLoading(true);
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 30);
@@ -31,7 +35,8 @@ const MissingReportsCalendar = ({ weekdays, onDateSelect }: MissingReportsCalend
 
       const data = await response.json();
       setSubmissionStatus(data);
-    } catch (error) {
+    } catch (error: any) {
+      setError(error.message);
       console.error('Error fetching submission status:', error);
     } finally {
       setLoading(false);

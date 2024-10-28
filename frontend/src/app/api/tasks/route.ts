@@ -4,7 +4,36 @@ import type { ApiResponse } from '@/types/api';
 import type { Task } from '@/types/task';
 
 export async function GET(req: Request) {
-  return handleRequest<Task[]>(req, 'GET');
+  try {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const backendUrl = `${process.env.BACKEND_URL}/api/tasks`;
+    const response = await fetch(backendUrl, {
+      headers: {
+        'Authorization': `Bearer ${token.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('Tasks API error:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch tasks',
+        details: error.message 
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {

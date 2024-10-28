@@ -313,4 +313,74 @@ router.delete('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (
     }
 });
 
+// Add this route to handle submission status
+router.get('/submission-status', apiLimiter, authMiddleware, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Start date and end date are required' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      },
+      include: {
+        developer: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Submission Status Error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch submission status',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Add this route after line 95
+router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
+  try {
+    const { developerEmail } = req.query;
+    const whereClause = {};
+
+    if (developerEmail) {
+      whereClause.developer = {
+        email: developerEmail
+      };
+    } else {
+      whereClause.developerId = req.user.id;
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: whereClause,
+      orderBy: { date: 'desc' },
+      include: {
+        developer: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Fetch Tasks Error:', error);
+    next(error);
+  }
+});
+
 export default router;
