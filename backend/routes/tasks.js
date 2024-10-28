@@ -345,7 +345,7 @@ router.get('/submission-status', apiLimiter, authMiddleware, async (req, res) =>
   }
 });
 
-// Add this route after line 95
+// Get all tasks for a developer
 router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
   try {
     const tasks = await prisma.task.findMany({
@@ -373,6 +373,71 @@ router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// Add this route for developer task updates
+// Update task (Developer)
+router.put('/:id', apiLimiter, authMiddleware, async (req, res, next) => {
+    try {
+        const taskId = parseInt(req.params.id, 10);
+        if (isNaN(taskId)) {
+            throw createHttpError(400, 'Invalid task ID');
+        }
+
+        // Verify task exists and belongs to developer
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                developer: true
+            }
+        });
+
+        if (!existingTask) {
+            throw createHttpError(404, 'Task not found');
+        }
+
+        // Normalize emails for comparison
+        const normalizedTaskEmail = existingTask.developer.email.toLowerCase().trim();
+        const normalizedUserEmail = req.user.email.toLowerCase().trim();
+
+        if (normalizedTaskEmail !== normalizedUserEmail) {
+            throw createHttpError(403, 'Unauthorized: Cannot update task that belongs to another developer');
+        }
+
+        const { targetsAchieved, status } = req.body;
+
+        // Update the task
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                targetsAchieved,
+                status
+            },
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+
+        res.json({
+            message: 'Task updated successfully',
+            task: updatedTask
+        });
+    } catch (error) {
+        console.error('Task Update Error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to update task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            });
+        }
+    }
 });
 
 export default router;
