@@ -106,59 +106,43 @@ router.post('/login', async (req, res) => {
                     password: true,
                     name: true,
                     role: true,
-                    team: true
                 }
             });
         }
 
+        // Check if user exists
         if (!user) {
-            throw createHttpError(401, 'Invalid credentials');
+            return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        // Verify password
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-            throw createHttpError(401, 'Invalid credentials');
+        // Compare password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        // Generate token with consistent payload structure
-        const tokenPayload = {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: isAdmin ? 'admin' : 'developer',
-            isAdmin: isAdmin,
-            team: user.team, // Will be undefined for admin
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-        };
+        console.log('User logged in successfully:', user); // Debugging log
 
-        const token = jwt.sign(
-            tokenPayload,
-            process.env.JWT_SECRET
-        );
-
-        // Log token payload for debugging
-        console.log('Token payload:', { ...tokenPayload, iat: undefined, exp: undefined });
-
-        // Send response
-        res.json({
-            token,
+        // Return JWT
+        const payload = {
             user: {
                 id: user.id,
-                email: user.email,
-                name: user.name,
-                role: isAdmin ? 'admin' : 'developer',
-                isAdmin: isAdmin,
-                team: user.team
+                role: user.role,
             }
-        });
+        };
 
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(error.status || 500).json({
-            error: error.message || 'Internal server error'
-        });
+        jwt.sign(
+            payload,
+            process.env.JWT_SECRET,
+            { expiresIn: 360000 },
+            (err, token) => {
+                if (err) throw err;
+                res.json({ token });
+            }
+        );
+    } catch (err) {
+        console.error('Error Details:', err.message); // Debugging log
+        res.status(500).send('Server error');
     }
 });
 

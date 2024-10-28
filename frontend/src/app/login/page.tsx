@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // Correct import from 'next/navigation'
 
 const LoginPage = () => {
   const { data: session, status } = useSession();
@@ -11,6 +11,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  // Redirect authenticated users
   useEffect(() => {
     if (status === 'authenticated') {
       if (session.user.role === 'admin') {
@@ -21,9 +22,11 @@ const LoginPage = () => {
     }
   }, [session, status, router]);
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
     const res = await signIn('credentials', {
       redirect: false,
       email,

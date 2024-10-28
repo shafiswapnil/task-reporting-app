@@ -9,201 +9,308 @@ import { apiLimiter } from '../middleware/rateLimiter.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Validation schema
-const taskSchema = Joi.object({
-  developerId: Joi.number().integer().positive().required(),
-  date: Joi.date().iso().required(),
-  project: Joi.string().required(),
-  role: Joi.string().required(),
-  team: Joi.string().valid('web', 'app').required(),
-  targetsGiven: Joi.string().required(),
-  targetsAchieved: Joi.string().required(),
-  status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
+// Validation schemas
+const developerTaskSchema = Joi.object({
+    date: Joi.date().iso().required(),
+    targetsGiven: Joi.string().required(),
+    targetsAchieved: Joi.string().required(),
+    status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
 });
 
-// Create task route (Admin)
+const adminTaskSchema = Joi.object({
+    developerId: Joi.number().integer().positive().required(),
+    date: Joi.date().iso().required(),
+    project: Joi.string().required(),
+    role: Joi.string().required(),
+    team: Joi.string().valid('web', 'app').required(),
+    targetsGiven: Joi.string().required(),
+    targetsAchieved: Joi.string().required(),
+    status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
+});
+
+// -------------------
+// Developer Routes
+// -------------------
+
+// Submit a new task (Developer)
+router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
+    try {
+        // Validate request body
+        const { error, value } = developerTaskSchema.validate(req.body);
+        if (error) {
+            throw createHttpError(400, error.details[0].message);
+        }
+
+        const { date, targetsGiven, targetsAchieved, status } = value;
+
+        // Fetch developer's details to get project, role, and team
+        const developer = await prisma.developer.findUnique({
+            where: { id: req.user.id },
+            select: {
+                projects: true,
+                role: true,
+                team: true,
+            },
+        });
+
+        if (!developer) {
+            throw createHttpError(404, 'Developer not found');
+        }
+
+        // Assign project (selecting the first project for simplicity)
+        const project = developer.projects.length > 0 ? developer.projects[0] : 'Unknown Project';
+        const role = developer.role;
+        const team = developer.team;
+
+        // Create the task
+        const task = await prisma.task.create({
+            data: {
+                developerId: req.user.id,
+                date: new Date(date),
+                project,
+                role,
+                team,
+                targetsGiven,
+                targetsAchieved,
+                status,
+                submittedAt: new Date(),
+            },
+        });
+
+        res.status(201).json({
+            message: 'Task submitted successfully',
+            task,
+        });
+    } catch (error) {
+        console.error('Developer Task Submission Error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to submit task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            });
+        }
+    }
+});
+
+// Fetch submitted tasks (Developer)
+router.get('/submitted', apiLimiter, authMiddleware, async (req, res, next) => {
+    try {
+        const tasks = await prisma.task.findMany({
+            where: {
+                developerId: req.user.id,
+            },
+            orderBy: { date: 'desc' },
+        });
+
+        res.status(200).json(tasks);
+    } catch (error) {
+        console.error('Fetch Submitted Tasks Error:', error);
+        res.status(500).json({
+            error: 'Failed to fetch submitted tasks',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        });
+    }
+});
+
+// -------------------
+// Admin Routes
+// -------------------
+
+// Create a new task (Admin)
 router.post('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res, next) => {
-  try {
-    const { error, value } = taskSchema.validate(req.body);
-    if (error) {
-      throw createHttpError(400, error.details[0].message);
+    try {
+        // Validate request body
+        const { error, value } = adminTaskSchema.validate(req.body);
+        if (error) {
+            throw createHttpError(400, error.details[0].message);
+        }
+
+        const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+
+        // Check if developer exists
+        const developer = await prisma.developer.findUnique({
+            where: { id: developerId },
+        });
+
+        if (!developer) {
+            throw createHttpError(404, 'Developer not found');
+        }
+
+        // Create the task
+        const task = await prisma.task.create({
+            data: {
+                developerId,
+                date: new Date(date),
+                project,
+                role,
+                team,
+                targetsGiven,
+                targetsAchieved,
+                status,
+                submittedAt: new Date(),
+            },
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        res.status(201).json({
+            message: 'Task created successfully',
+            task,
+        });
+    } catch (error) {
+        console.error('Admin Task Creation Error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to create task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            });
+        }
     }
-
-    const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
-
-    // Check if developer exists
-    const developer = await prisma.developer.findUnique({
-      where: { id: developerId },
-    });
-
-    if (!developer) {
-      throw createHttpError(404, `Developer with ID ${developerId} not found`);
-    }
-
-    // Create task
-    const task = await prisma.task.create({
-      data: {
-        developerId,
-        date: new Date(date),
-        project,
-        role,
-        team,
-        targetsGiven,
-        targetsAchieved,
-        status,
-      },
-      include: {
-        developer: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    res.status(201).json({
-      message: 'Task created successfully',
-      task,
-    });
-  } catch (error) {
-    console.error('Task creation error:', error);
-    if (error instanceof createHttpError.HttpError) {
-      res.status(error.statusCode).json({ error: error.message });
-    } else {
-      res.status(500).json({
-        error: 'Failed to create task',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      });
-    }
-  }
 });
 
-// GET all tasks (admin only)
+// Fetch all tasks (Admin)
 router.get('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res, next) => {
-  try {
-    const tasks = await prisma.task.findMany({
-      include: {
-        developer: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+    try {
+        const tasks = await prisma.task.findMany({
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: { date: 'desc' },
+        });
 
-    // Format tasks as needed
-    const formattedTasks = tasks.map(task => ({
-      id: task.id,
-      date: task.date.toISOString().split('T')[0],
-      developerName: task.developer.name,
-      developerEmail: task.developer.email,
-      project: task.project,
-      role: task.role,
-      team: task.team,
-      targetsGiven: task.targetsGiven,
-      targetsAchieved: task.targetsAchieved,
-      status: task.status,
-    }));
-
-    res.json(formattedTasks);
-  } catch (error) {
-    console.error('Error fetching admin tasks:', error);
-    next(error);
-  }
+        res.status(200).json(tasks);
+    } catch (error) {
+        console.error('Fetch All Tasks Error:', error);
+        res.status(500).json({
+            error: 'Failed to fetch tasks',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        });
+    }
 });
 
-// Update task route (Admin)
+// Update a task (Admin)
 router.put('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (req, res, next) => {
-  try {
-    const taskId = parseInt(req.params.id, 10);
-    if (isNaN(taskId)) {
-      throw createHttpError(400, 'Invalid task ID');
+    try {
+        const taskId = parseInt(req.params.id, 10);
+        if (isNaN(taskId)) {
+            throw createHttpError(400, 'Invalid task ID');
+        }
+
+        // Validate request body
+        const { error, value } = adminTaskSchema.validate(req.body);
+        if (error) {
+            throw createHttpError(400, error.details[0].message);
+        }
+
+        const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+
+        // Check if task exists
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId },
+        });
+
+        if (!existingTask) {
+            throw createHttpError(404, `Task with ID ${taskId} not found`);
+        }
+
+        // Check if developer exists
+        const developer = await prisma.developer.findUnique({
+            where: { id: developerId },
+        });
+
+        if (!developer) {
+            throw createHttpError(404, 'Developer not found');
+        }
+
+        // Update the task
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                developerId,
+                date: new Date(date),
+                project,
+                role,
+                team,
+                targetsGiven,
+                targetsAchieved,
+                status,
+            },
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        res.status(200).json({
+            message: 'Task updated successfully',
+            task: updatedTask,
+        });
+    } catch (error) {
+        console.error('Admin Task Update Error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to update task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            });
+        }
     }
-
-    const { error, value } = taskSchema.validate(req.body);
-    if (error) {
-      throw createHttpError(400, error.details[0].message);
-    }
-
-    // Check if task exists
-    const existingTask = await prisma.task.findUnique({
-      where: { id: taskId },
-    });
-
-    if (!existingTask) {
-      throw createHttpError(404, `Task with ID ${taskId} not found`);
-    }
-
-    // Update task
-    const updatedTask = await prisma.task.update({
-      where: { id: taskId },
-      data: value,
-      include: {
-        developer: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    res.json({
-      message: 'Task updated successfully',
-      task: updatedTask,
-    });
-  } catch (error) {
-    console.error('Task update error:', error);
-    if (error instanceof createHttpError.HttpError) {
-      res.status(error.statusCode).json({ error: error.message });
-    } else {
-      res.status(500).json({
-        error: 'Failed to update task',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      });
-    }
-  }
 });
 
-// Delete task route (Admin)
+// Delete a task (Admin)
 router.delete('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (req, res, next) => {
-  try {
-    const taskId = parseInt(req.params.id, 10);
-    if (isNaN(taskId)) {
-      throw createHttpError(400, 'Invalid task ID');
+    try {
+        const taskId = parseInt(req.params.id, 10);
+        if (isNaN(taskId)) {
+            throw createHttpError(400, 'Invalid task ID');
+        }
+
+        // Check if task exists
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId },
+        });
+
+        if (!existingTask) {
+            throw createHttpError(404, `Task with ID ${taskId} not found`);
+        }
+
+        // Delete task
+        await prisma.task.delete({
+            where: { id: taskId },
+        });
+
+        res.status(200).json({ message: 'Task deleted successfully' });
+    } catch (error) {
+        console.error('Admin Task Deletion Error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to delete task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            });
+        }
     }
-
-    // Check if task exists
-    const existingTask = await prisma.task.findUnique({
-      where: { id: taskId },
-    });
-
-    if (!existingTask) {
-      throw createHttpError(404, `Task with ID ${taskId} not found`);
-    }
-
-    // Delete task
-    await prisma.task.delete({
-      where: { id: taskId },
-    });
-
-    res.json({ message: 'Task deleted successfully' });
-  } catch (error) {
-    console.error('Task deletion error:', error);
-    if (error instanceof createHttpError.HttpError) {
-      res.status(error.statusCode).json({ error: error.message });
-    } else {
-      res.status(500).json({
-        error: 'Failed to delete task',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      });
-    }
-  }
 });
 
 export default router;

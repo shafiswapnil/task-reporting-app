@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button'; // Assuming you have a UI component library
+import { Button } from '@/components/ui/button';
 
 export default function UnauthorizedPage() {
   const router = useRouter();
@@ -42,4 +42,3 @@ export default function UnauthorizedPage() {
     </div>
   );
 }
-

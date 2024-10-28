@@ -119,144 +119,97 @@ const TaskSubmissionPage = () => {
     }
   };
 
-  const taskStatusOptions: TaskStatus[] = [
-    'Completed',
-    'Unfinished',
-    'Pending',
-    'Dependent',
-    'Partially Completed'
-  ];
-
-  const handleDateSelect = (date: string) => {
-    setTask(prev => ({ ...prev, date }));
-    // Optionally scroll to the form
-    document.getElementById('taskForm')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
-    <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}`}>
-      <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-900 rounded-md shadow-md">
-        <div className="flex justify-between">
-          <h2 className="text-2xl font-bold text-center">Submit Your Task</h2>
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300 flex items-center"
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">Task Submission</h1>
+      {message && <p className="text-red-500">{message}</p>}
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div>
+          <label htmlFor="date" className="block text-sm font-medium">
+            Date
+          </label>
+          <input
+            type="date"
+            name="date"
+            value={task.date}
+            onChange={handleChange}
+            required
+            className="form-input mt-1 block w-full"
+          />
+        </div>
+        <div>
+          <label htmlFor="targetsGiven" className="block text-sm font-medium">
+            Targets Given
+          </label>
+          <input
+            type="number"
+            name="targetsGiven"
+            value={task.targetsGiven}
+            onChange={handleChange}
+            required
+            className="form-input mt-1 block w-full"
+          />
+        </div>
+        <div>
+          <label htmlFor="targetsAchieved" className="block text-sm font-medium">
+            Targets Achieved
+          </label>
+          <input
+            type="number"
+            name="targetsAchieved"
+            value={task.targetsAchieved}
+            onChange={handleChange}
+            required
+            className="form-input mt-1 block w-full"
+          />
+        </div>
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium">
+            Status
+          </label>
+          <select 
+            name="status" 
+            value={task.status} 
+            onChange={handleChange}
+            className="form-select mt-1 block w-full"
+            required
           >
-            {isDarkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
-          </button>
+            <option value="">Select Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+          </select>
         </div>
-        {message && <p className="text-center">{message}</p>}
-        <form id="taskForm" onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium">
-              Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={task.date}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <label htmlFor="targetsGiven" className="block text-sm font-medium">
-              Targets Given
-            </label>
-            <input
-              type="text"
-              id="targetsGiven"
-              name="targetsGiven"
-              value={task.targetsGiven}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <label htmlFor="targetsAchieved" className="block text-sm font-medium">
-              Targets Achieved
-            </label>
-            <input
-              type="text"
-              id="targetsAchieved"
-              name="targetsAchieved"
-              value={task.targetsAchieved}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 mt-1 border rounded-md focus:outline-none focus:ring focus:ring-indigo-200 dark:bg-gray-700 dark:border-gray-600"
-            />
-          </div>
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium">
-              Status
-            </label>
-            <select 
-              name="status" 
-              value={task.status} 
-              onChange={handleChange}
-              className="form-select mt-1 block w-full"
-              required
-            >
-              <option value="">Select Status</option>
-              {taskStatusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300 ${
-              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Task'}
-          </button>
-        </form>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={`w-full px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring focus:ring-indigo-300 ${
+            isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit Task'}
+        </button>
+      </form>
 
-        <MissingReportsCalendar 
-          weekdays={weekdays} 
-          onDateSelect={handleDateSelect} 
-        />
+      <MissingReportsCalendar 
+        weekdays={weekdays} 
+        onDateSelect={() => { /* Implement if needed */ }} 
+      />
 
-        <div className="mt-8">
-          <h3 className="text-xl font-bold">Submitted Tasks</h3>
-          <ul className="mt-4 space-y-2">
-            {submittedTasks.map((taskData: any, index: number) => (
-              <li key={index} className="p-4 bg-gray-200 rounded-md dark:bg-gray-800">
-                <p><strong>Date:</strong> {taskData.date}</p>
-                <p><strong>Targets Given:</strong> {taskData.targetsGiven}</p>
-                <p><strong>Targets Achieved:</strong> {taskData.targetsAchieved}</p>
-                <p><strong>Status:</strong> {taskData.status}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-8">
-          <h3 className="text-xl font-bold">Your Weekdays</h3>
-          <p className="mt-2">{weekdays}</p>
-        </div>
+      <div className="mt-8">
+        <h3 className="text-xl font-bold">Submitted Tasks</h3>
+        <ul className="mt-4 space-y-2">
+          {submittedTasks.map((taskData: any, index: number) => (
+            <li key={index} className="p-4 bg-gray-200 rounded-md dark:bg-gray-800">
+              <p><strong>Date:</strong> {taskData.date}</p>
+              <p><strong>Targets Given:</strong> {taskData.targetsGiven}</p>
+              <p><strong>Targets Achieved:</strong> {taskData.targetsAchieved}</p>
+              <p><strong>Status:</strong> {taskData.status}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
 };
 
-const TaskSubmissionPageWrapper = () => {
-  return (
-    <ErrorBoundary>
-      <TaskSubmissionPage />
-    </ErrorBoundary>
-  );
-};
-
-export default TaskSubmissionPageWrapper;
+export default TaskSubmissionPage;

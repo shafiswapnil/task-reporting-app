@@ -6,7 +6,6 @@ import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import developerRoutes from './routes/developers.js';
 import taskRoutes from './routes/tasks.js';
-import adminRoutes from './routes/admin.js';
 import reportRoutes from './routes/reports.js';
 import { PrismaClient } from '@prisma/client';
 import createHttpError from 'http-errors';
@@ -31,17 +30,16 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/developers', developerRoutes);
 app.use('/api/tasks', taskRoutes);
-app.use('/api/admins', adminRoutes);
 app.use('/api/reports', reportRoutes);
 
-// Home route for testing
+// Health Check Route
 app.get('/', (req, res) => {
-  res.send('Welcome to the Task Reporting API');
+    res.send('Welcome to the Task Reporting API');
 });
 
 // 404 Handler
 app.use((req, res, next) => {
-  next(createHttpError(404, 'Route not found'));
+    next(createHttpError(404, 'Route not found'));
 });
 
 // Error handler
