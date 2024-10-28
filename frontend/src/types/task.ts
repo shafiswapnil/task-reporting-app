@@ -39,3 +39,16 @@ export interface TaskSubmissionStatus {
   taskId?: number;
   submittedAt?: string | null;
 }
+
+// Add UpdateTask type
+export interface UpdateTask {
+  id: number;
+  developerId: number;
+  date: string;
+  project: string;
+  role: string;
+  team: string;
+  targetsGiven: string;
+  targetsAchieved: string;
+  status: TaskStatus;
+}

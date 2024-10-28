@@ -1,150 +1,109 @@
 import { useState, useEffect } from 'react';
-import { Task, TaskStatus, NewTask } from '@/types/task';
+import { Task, UpdateTask, TaskStatus } from '../types/task';
+import { createTask, updateTask } from '../services/api';
 
 interface TaskFormProps {
-  onSubmit: (task: NewTask) => void;
-  initialData?: Task;
-  submitLabel: string;
+  task?: Task;
+  onSubmit: () => void;
+  onCancel: () => void;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, submitLabel }) => {
-  const [formData, setFormData] = useState<NewTask>({
-    developerId: initialData?.developerId || 0,
-    date: initialData?.date || '',
-    project: initialData?.project || '',
-    role: initialData?.role || '',
-    team: initialData?.team || 'web',
-    targetsGiven: initialData?.targetsGiven || '',
-    targetsAchieved: initialData?.targetsAchieved || '',
-    status: initialData?.status || 'Pending',
+const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
+  const [formData, setFormData] = useState({
+    developerId: task?.developerId || 0,
+    date: task?.date?.split('T')[0] || '',
+    project: task?.project || '',
+    role: task?.role || '',
+    team: task?.team || '',
+    targetsGiven: task?.targetsGiven || '',
+    targetsAchieved: task?.targetsAchieved || '',
+    status: task?.status || 'Pending' as TaskStatus
   });
 
-  const [developers, setDevelopers] = useState<{ id: number; name: string; email: string }[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchDevelopers = async () => {
-      try {
-        const response = await fetch('/api/developers');
-        if (!response.ok) {
-          throw new Error('Failed to fetch developers');
-        }
-        const data = await response.json();
-        setDevelopers(data);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load developers. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDevelopers();
-  }, []);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'developerId' ? parseInt(value, 10) : value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setError('');
+    setLoading(true);
+
+    try {
+      if (task?.id) {
+        // Update existing task
+        await updateTask(task.id, {
+          id: task.id,
+          ...formData
+        });
+      } else {
+        // Create new task
+        await createTask(formData);
+      }
+      onSubmit();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  if (loading) {
-    return <div>Loading form...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="developerId" className="block text-sm font-medium">
-          Developer
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Developer</label>
         <select
-          id="developerId"
-          name="developerId"
           value={formData.developerId}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, developerId: Number(e.target.value) })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         >
           <option value="">Select Developer</option>
-          {developers.map(dev => (
-            <option key={dev.id} value={dev.id}>
-              {dev.name} ({dev.email})
-            </option>
-          ))}
+          {/* Add developer options here */}
         </select>
       </div>
 
       <div>
-        <label htmlFor="date" className="block text-sm font-medium">
-          Date
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Date</label>
         <input
           type="date"
-          id="date"
-          name="date"
           value={formData.date}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         />
       </div>
 
       <div>
-        <label htmlFor="project" className="block text-sm font-medium">
-          Project
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Project</label>
         <input
           type="text"
-          id="project"
-          name="project"
           value={formData.project}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
           placeholder="e.g., AFS, SB, VideoEnc"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         />
       </div>
 
       <div>
-        <label htmlFor="role" className="block text-sm font-medium">
-          Role
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Role</label>
         <input
           type="text"
-          id="role"
-          name="role"
           value={formData.role}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
           placeholder="e.g., Developer, Tester"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         />
       </div>
 
       <div>
-        <label htmlFor="team" className="block text-sm font-medium">
-          Team
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Team</label>
         <select
-          id="team"
-          name="team"
           value={formData.team}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         >
           <option value="web">Web Team</option>
           <option value="app">App Team</option>
@@ -152,48 +111,36 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, submitLabel 
       </div>
 
       <div>
-        <label htmlFor="targetsGiven" className="block text-sm font-medium">
-          Targets Given
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Targets Given</label>
         <input
           type="text"
-          id="targetsGiven"
-          name="targetsGiven"
           value={formData.targetsGiven}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, targetsGiven: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
           placeholder="Enter targets given"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         />
       </div>
 
       <div>
-        <label htmlFor="targetsAchieved" className="block text-sm font-medium">
-          Targets Achieved
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Targets Achieved</label>
         <input
           type="text"
-          id="targetsAchieved"
-          name="targetsAchieved"
           value={formData.targetsAchieved}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, targetsAchieved: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
           placeholder="Enter targets achieved"
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         />
       </div>
 
       <div>
-        <label htmlFor="status" className="block text-sm font-medium">
-          Status
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Status</label>
         <select
-          id="status"
-          name="status"
           value={formData.status}
-          onChange={handleChange}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           required
-          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-indigo-300"
         >
           <option value="Completed">Completed</option>
           <option value="Unfinished">Unfinished</option>
@@ -203,15 +150,28 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, submitLabel 
         </select>
       </div>
 
-      <button
-        type="submit"
-        className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
-      >
-        {submitLabel}
-      </button>
+      {error && (
+        <div className="text-red-600 text-sm">{error}</div>
+      )}
+
+      <div className="flex justify-end space-x-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : (task ? 'Update' : 'Create')}
+        </button>
+      </div>
     </form>
   );
 };
 
 export default TaskForm;
-

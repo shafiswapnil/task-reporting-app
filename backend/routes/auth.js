@@ -74,16 +74,15 @@ router.post(
   }
 );
 
-// POST /api/auth/login
+// Login route
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        
+        console.log('Login attempt for:', email); // Debug log
 
-        // Log the attempt
-        console.log('Login attempt for:', email);
-
-        // First, try to find a developer
-        let user = await prisma.developer.findUnique({
+        // First try to find admin
+        let user = await prisma.admin.findUnique({
             where: { email },
             select: {
                 id: true,
@@ -94,47 +93,53 @@ router.post('/login', async (req, res) => {
             }
         });
 
-        // If not found as developer, try admin
+        let isAdmin = true;
+
+        // If not found as admin, try developer
         if (!user) {
-            user = await prisma.admin.findUnique({
+            isAdmin = false;
+            user = await prisma.developer.findUnique({
                 where: { email },
                 select: {
                     id: true,
                     email: true,
                     password: true,
                     name: true,
-                    role: true
+                    role: true,
+                    team: true
                 }
             });
         }
 
-        // If no user found at all
         if (!user) {
-            console.log('No user found with email:', email);
             throw createHttpError(401, 'Invalid credentials');
         }
-
-        // Log found user (without password)
-        console.log('Found user:', { ...user, password: '[HIDDEN]' });
 
         // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
-            console.log('Invalid password for user:', email);
             throw createHttpError(401, 'Invalid credentials');
         }
 
-        // Generate token
+        // Generate token with consistent payload structure
+        const tokenPayload = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: isAdmin ? 'admin' : 'developer',
+            isAdmin: isAdmin,
+            team: user.team, // Will be undefined for admin
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+        };
+
         const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                role: user.role || 'developer', // Default to developer if role not set
-                isAdmin: user.role === 'admin'
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            tokenPayload,
+            process.env.JWT_SECRET
         );
+
+        // Log token payload for debugging
+        console.log('Token payload:', { ...tokenPayload, iat: undefined, exp: undefined });
 
         // Send response
         res.json({
@@ -143,8 +148,9 @@ router.post('/login', async (req, res) => {
                 id: user.id,
                 email: user.email,
                 name: user.name,
-                role: user.role || 'developer',
-                isAdmin: user.role === 'admin'
+                role: isAdmin ? 'admin' : 'developer',
+                isAdmin: isAdmin,
+                team: user.team
             }
         });
 

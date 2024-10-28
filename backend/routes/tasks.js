@@ -80,4 +80,104 @@ router.post('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, r
   }
 });
 
+// GET all tasks (admin only)
+router.get('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const tasks = await prisma.task.findMany({
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+
+        res.json(tasks);
+        
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        res.status(500).json({
+            error: 'Failed to fetch tasks',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Update task (admin only)
+router.put('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const taskId = parseInt(req.params.id);
+        
+        // Validate request body
+        const { error, value } = taskSchema.validate(req.body);
+        if (error) {
+            throw createHttpError(400, error.details[0].message);
+        }
+
+        const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+
+        // Check if task exists
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId }
+        });
+
+        if (!existingTask) {
+            throw createHttpError(404, 'Task not found');
+        }
+
+        // Check if developer exists
+        const developer = await prisma.developer.findUnique({
+            where: { id: developerId }
+        });
+
+        if (!developer) {
+            throw createHttpError(404, `Developer with ID ${developerId} not found`);
+        }
+
+        // Update the task
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                developerId,
+                date: new Date(date),
+                project,
+                role,
+                team,
+                targetsGiven,
+                targetsAchieved,
+                status
+            },
+            include: {
+                developer: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+
+        res.json({
+            message: 'Task updated successfully',
+            task: updatedTask
+        });
+
+    } catch (error) {
+        console.error('Task update error:', error);
+        if (error instanceof createHttpError.HttpError) {
+            res.status(error.statusCode).json({ error: error.message });
+        } else {
+            res.status(500).json({
+                error: 'Failed to update task',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+    }
+});
+
 export default router;
