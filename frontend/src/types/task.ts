@@ -1,22 +1,15 @@
-export type TaskStatus = 
-  | 'Completed'
-  | 'Unfinished'
-  | 'Pending'
-  | 'Dependent'
-  | 'PartiallyCompleted';
+export type TaskStatus = 'Pending' | 'Completed' | 'PartiallyCompleted' | 'Failed';
 
 export interface Task {
-  id?: number;
+  id: string;
   date: string;
   project: string;
   targetsGiven: string;
   targetsAchieved: string;
   status: TaskStatus;
-  submittedAt: string;
-  developer?: {
-    name: string;
-    email: string;
-  };
+  developerId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface NewTask {
@@ -32,9 +25,7 @@ export interface NewTask {
 
 export interface TaskSubmissionStatus {
   date: string;
-  isSubmitted: boolean;
-  taskId?: number;
-  submittedAt?: string | null;
+  submitted: boolean;
 }
 
 // Add UpdateTask type

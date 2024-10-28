@@ -1,24 +1,19 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { TaskSubmissionStatus } from '@/types/task';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useSession } from 'next-auth/react';
 
-interface MissingReportsCalendarProps {
-  weekdays: string[];
-  onDateSelect: (date: string) => void;
-}
-
-const MissingReportsCalendar: React.FC<MissingReportsCalendarProps> = ({
-  weekdays,
-  onDateSelect,
-}) => {
+export default function MissingReportsCalendar() {
   const [loading, setLoading] = useState(true);
   const [submissionStatus, setSubmissionStatus] = useState<TaskSubmissionStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [dates, setDates] = useState<Date[]>([]);
-  const debouncedDates = useDebounce(dates, 1000); // 1 second delay
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fetchSubmissionStatus = async () => {
+      if (!session?.user?.email) return;
+      
       try {
         setLoading(true);
         const endDate = new Date();
@@ -26,7 +21,7 @@ const MissingReportsCalendar: React.FC<MissingReportsCalendarProps> = ({
         startDate.setDate(startDate.getDate() - 30);
 
         const response = await fetch(
-          `/api/tasks/submission-status?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+          `/api/tasks/submission-status?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&email=${encodeURIComponent(session.user.email)}`
         );
 
         if (!response.ok) {
@@ -35,91 +30,76 @@ const MissingReportsCalendar: React.FC<MissingReportsCalendarProps> = ({
 
         const data = await response.json();
         setSubmissionStatus(data);
-      } catch (error: any) {
-        setError(error.message);
+      } catch (error) {
         console.error('Error fetching submission status:', error);
+        setError('Failed to load submission status');
       } finally {
         setLoading(false);
       }
     };
 
-    if (debouncedDates.length > 0) {
-      fetchSubmissionStatus();
-    }
-  }, [debouncedDates]);
-
-  const isWorkingDay = (date: Date): boolean => {
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-    return weekdays.includes(dayName);
-  };
-
-  const getStatusForDate = (date: string): TaskSubmissionStatus | undefined => {
-    return submissionStatus.find(status => status.date === date);
-  };
-
-  const renderCalendarDays = () => {
-    const days = [];
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-
-    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      if (isWorkingDay(date)) {
-        const dateStr = date.toISOString().split('T')[0];
-        const status = getStatusForDate(dateStr);
-        const isSubmitted = status?.isSubmitted ?? false;
-
-        days.push(
-          <div
-            key={dateStr}
-            className={`p-2 m-1 rounded cursor-pointer ${
-              isSubmitted 
-                ? 'bg-green-100 dark:bg-green-800' 
-                : 'bg-red-100 dark:bg-red-800'
-            }`}
-            onClick={() => !isSubmitted && onDateSelect(dateStr)}
-          >
-            <div className="text-sm font-semibold">
-              {new Date(dateStr).toLocaleDateString()}
-            </div>
-            <div className="text-xs">
-              {isSubmitted ? 'Submitted' : 'Missing'}
-            </div>
-          </div>
-        );
-      }
-    }
-    return days;
-  };
+    fetchSubmissionStatus();
+  }, [session]);
 
   if (loading) {
     return (
-      <div className="mt-8">
-        <h3 className="text-xl font-bold mb-4">Report Status (Last 30 Days)</h3>
+      <div className="bg-white rounded-lg p-4">
+        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
         <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
       </div>
     );
   }
 
-  if (!submissionStatus.length) {
+  if (error) {
     return (
-      <div className="mt-8">
-        <h3 className="text-xl font-bold mb-4">Report Status (Last 30 Days)</h3>
-        <p className="text-gray-600 dark:text-gray-400">No submission data available</p>
+      <div className="bg-white rounded-lg p-4">
+        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
+        <p className="text-red-500">{error}</p>
       </div>
     );
   }
 
+  // If no data is available yet, show placeholder grid
+  if (!submissionStatus || submissionStatus.length === 0) {
+    return (
+      <div className="bg-white rounded-lg p-4">
+        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 30 }, (_, i) => (
+            <div
+              key={i}
+              className="p-2 rounded-md text-center bg-gray-100 text-gray-600"
+            >
+              {i + 1}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show actual submission status data
   return (
-    <div className="mt-8">
-      <h3 className="text-xl font-bold mb-4">Report Status (Last 30 Days)</h3>
-      <div className="flex flex-wrap gap-2">
-        {renderCalendarDays()}
+    <div className="bg-white rounded-lg p-4">
+      <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
+      <div className="grid grid-cols-7 gap-2">
+        {submissionStatus.map((status, index) => (
+          <div
+            key={index}
+            className={`p-2 rounded-md text-center cursor-pointer
+              ${status.submitted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+            onClick={() => {
+              // Handle date selection if needed
+              const date = new Date(status.date).toISOString().split('T')[0];
+              console.log('Selected date:', date);
+            }}
+          >
+            {new Date(status.date).getDate()}
+          </div>
+        ))}
       </div>
     </div>
   );
-};
-
-export default MissingReportsCalendar;
+}

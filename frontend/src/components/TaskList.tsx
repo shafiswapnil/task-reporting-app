@@ -1,248 +1,51 @@
-import { useState, useEffect } from 'react';
-import { Task, TaskStatus } from '@/types/task';
-import TaskForm from './TaskForm';
+"use client";
+
+import { Task } from '@/types/task';
 
 interface TaskListProps {
-  refreshTrigger: boolean;
-  setRefreshTrigger: (value: boolean) => void;
+  tasks: Task[];
+  onUpdateTask: (taskId: string, taskData: Partial<Task>) => Promise<void>;
+  onDeleteTask: (taskId: string) => Promise<void>;
 }
 
-const TaskList: React.FC<TaskListProps> = ({ refreshTrigger, setRefreshTrigger }) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [filter, setFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('date_desc');
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch('/api/tasks/admin');
-        if (!response.ok) {
-          throw new Error('Failed to fetch tasks');
-        }
-        const data = await response.json();
-        setTasks(data);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load tasks. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, [refreshTrigger]);
-
-  const handleDelete = async (taskId: number) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-
-    try {
-      const response = await fetch(`/api/tasks/admin/${taskId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Adjust as per your auth implementation
-        },
-      });
-
-      if (!response.ok) {
-        const resData = await response.json();
-        throw new Error(resData.error || 'Failed to delete task');
-      }
-
-      alert('Task deleted successfully');
-      setRefreshTrigger(!refreshTrigger);
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || 'Failed to delete task');
-    }
-  };
-
-  const handleEdit = (task: Task) => {
-    setEditingTask(task);
-  };
-
-  const handleUpdate = async (updatedTask: any) => {
-    try {
-      const response = await fetch(`/api/tasks/admin/${editingTask?.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify(updatedTask),
-      });
-
-      if (!response.ok) {
-        const resData = await response.json();
-        throw new Error(resData.error || 'Failed to update task');
-      }
-
-      alert('Task updated successfully');
-      setEditingTask(null);
-      setRefreshTrigger(!refreshTrigger);
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || 'Failed to update task');
-    }
-  };
-
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'all') return true;
-    return task.status === filter;
-  });
-
-  const sortedTasks = filteredTasks.sort((a, b) => {
-    switch (sortBy) {
-      case 'date_asc':
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      case 'date_desc':
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      case 'status_asc':
-        return a.status.localeCompare(b.status);
-      case 'status_desc':
-        return b.status.localeCompare(a.status);
-      default:
-        return 0;
-    }
-  });
-
-  const getStatusColor = (status: TaskStatus): string => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800';
-      case 'Unfinished':
-        return 'bg-red-100 text-red-800';
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Dependent':
-        return 'bg-purple-100 text-purple-800';
-      case 'PartiallyCompleted':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  if (loading) {
-    return <div>Loading tasks...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
-
+export default function TaskList({ tasks, onUpdateTask, onDeleteTask }: TaskListProps) {
   return (
-    <div className="mt-8">
-      {editingTask && (
-        <div className="mb-8 p-4 border rounded-md bg-gray-100 dark:bg-gray-800">
-          <h2 className="text-lg font-semibold mb-4">Edit Task</h2>
-          <TaskForm
-            onSubmit={handleUpdate}
-            initialData={editingTask}
-            submitLabel="Update Task"
-          />
-          <button
-            onClick={() => setEditingTask(null)}
-            className="mt-4 px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <label htmlFor="filter" className="mr-2 font-medium">Filter by Status:</label>
-          <select
-            id="filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-2 py-1 border rounded-md"
-          >
-            <option value="all">All</option>
-            <option value="Completed">Completed</option>
-            <option value="Unfinished">Unfinished</option>
-            <option value="Pending">Pending</option>
-            <option value="Dependent">Dependent</option>
-            <option value="PartiallyCompleted">Partially Completed</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="sortBy" className="mr-2 font-medium">Sort by:</label>
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-2 py-1 border rounded-md"
-          >
-            <option value="date_desc">Date (Newest First)</option>
-            <option value="date_asc">Date (Oldest First)</option>
-            <option value="status_asc">Status (A-Z)</option>
-            <option value="status_desc">Status (Z-A)</option>
-          </select>
-        </div>
-      </div>
-
-      <table className="min-w-full bg-white dark:bg-gray-900 rounded-md overflow-hidden">
-        <thead>
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Date</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Developer</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Project</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Role</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Team</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Targets Given</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Targets Achieved</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Status</th>
-            <th className="py-2 px-4 bg-gray-200 dark:bg-gray-700">Actions</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody>
-          {sortedTasks.map(task => (
-            <tr key={task.id} className="border-b dark:border-gray-700">
-              <td className="py-2 px-4">{new Date(task.date).toLocaleDateString()}</td>
-              <td className="py-2 px-4">{task.developer.name} ({task.developer.email})</td>
-              <td className="py-2 px-4">{task.project}</td>
-              <td className="py-2 px-4">{task.role}</td>
-              <td className="py-2 px-4 capitalize">{task.team}</td>
-              <td className="py-2 px-4">{task.targetsGiven}</td>
-              <td className="py-2 px-4">{task.targetsAchieved}</td>
-              <td className="py-2 px-4">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
-                  {task.status === 'PartiallyCompleted' ? 'Partially Completed' : task.status}
+        <tbody className="bg-white divide-y divide-gray-200">
+          {tasks.map((task) => (
+            <tr key={task.id}>
+              <td className="px-6 py-4 whitespace-nowrap">{new Date(task.date).toLocaleDateString()}</td>
+              <td className="px-6 py-4">{task.project}</td>
+              <td className="px-6 py-4">
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                  ${task.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                    task.status === 'PartiallyCompleted' ? 'bg-yellow-100 text-yellow-800' :
+                    task.status === 'Failed' ? 'bg-red-100 text-red-800' : 
+                    'bg-gray-100 text-gray-800'}`}>
+                  {task.status}
                 </span>
               </td>
-              <td className="py-2 px-4">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
-                  onClick={() => handleEdit(task)}
-                  className="px-2 py-1 mr-2 text-white bg-yellow-500 rounded-md hover:bg-yellow-600"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(task.id)}
-                  className="px-2 py-1 text-white bg-red-500 rounded-md hover:bg-red-600"
+                  onClick={() => onDeleteTask(task.id)}
+                  className="text-red-600 hover:text-red-900 mr-4"
                 >
                   Delete
                 </button>
               </td>
             </tr>
           ))}
-          {sortedTasks.length === 0 && (
-            <tr>
-              <td colSpan={9} className="py-4 text-center text-gray-500">
-                No tasks found.
-              </td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
   );
-};
-
-export default TaskList;
+}

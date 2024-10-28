@@ -3,33 +3,30 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-interface AuthContextType {
+const AuthContext = createContext<{
   isAuthenticated: boolean;
   isLoading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({
+}>({
   isAuthenticated: false,
   isLoading: true,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { status, data: session } = useSession();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (status !== "loading") {
+    if (status === 'loading') {
+      setIsLoading(true);
+    } else {
       setIsLoading(false);
+      setIsAuthenticated(status === 'authenticated');
     }
   }, [status]);
 
-  const value = {
-    isAuthenticated: !!session,
-    isLoading,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

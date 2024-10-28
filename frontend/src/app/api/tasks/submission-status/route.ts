@@ -11,31 +11,18 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const email = searchParams.get('email');
 
-    if (!startDate || !endDate) {
-      return NextResponse.json(
-        { error: 'Start date and end date are required' },
-        { status: 400 }
-      );
+    if (!startDate || !endDate || !email) {
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
     const backendUrl = `${process.env.BACKEND_URL}/api/tasks/submission-status`;
-    const response = await fetch(
-      `${backendUrl}?startDate=${startDate}&endDate=${endDate}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (response.status === 429) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429 }
-      );
-    }
+    const response = await fetch(`${backendUrl}?startDate=${startDate}&endDate=${endDate}&email=${email}`, {
+      headers: {
+        'Authorization': `Bearer ${token.accessToken}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Backend responded with status: ${response.status}`);
@@ -44,13 +31,7 @@ export async function GET(req: Request) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('Submission status error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch submission status',
-        details: error.message 
-      },
-      { status: 500 }
-    );
+    console.error('Submission status API error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
