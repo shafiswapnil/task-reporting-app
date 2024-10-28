@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 const prisma = new PrismaClient();
 
 class Admin {
-  static async create(name, email, phone, password) {
+  static async create(name, email, phone, password, role = 'admin') {
     const hashedPassword = await bcrypt.hash(password, 10);
     return prisma.admin.create({
       data: {
@@ -13,6 +13,7 @@ class Admin {
         email,
         phone,
         password: hashedPassword,
+        role,
       },
     });
   }
@@ -43,7 +44,7 @@ class Admin {
 
   static generateToken(admin) {
     return jwt.sign(
-      { id: admin.id, email: admin.email },
+      { id: admin.id, email: admin.email, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -64,4 +65,3 @@ class Admin {
 }
 
 export default Admin;
-

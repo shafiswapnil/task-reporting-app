@@ -1,27 +1,7 @@
-// Import required modules
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import authMiddleware from '../middleware/authMiddleware.js';
-import Joi from 'joi';
-import createHttpError from 'http-errors';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import adminMiddleware from '../middleware/adminMiddleware.js'; // Import the admin middleware
 
-const prisma = new PrismaClient();
-const router = express.Router();
-
-// Define Joi schema for task validation
-const taskSchema = Joi.object({
-  date: Joi.date().iso().required(),
-  project: Joi.string().required(),
-  role: Joi.string().required(),
-  team: Joi.string().valid('web', 'app').required(),
-  targetsGiven: Joi.string().required(),
-  targetsAchieved: Joi.string().required(),
-  status: Joi.string().valid('Completed', 'Unfinished', 'Pending', 'Dependent', 'PartiallyCompleted').required(),
-});
-
-// POST / - Add a new task
-router.post('/', apiLimiter, authMiddleware, async (req, res) => {
+// POST /api/tasks/admin - Create a new task manually
+router.post('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
   try {
     // Validate request body
     const { error, value } = taskSchema.validate(req.body);
@@ -29,59 +9,223 @@ router.post('/', apiLimiter, authMiddleware, async (req, res) => {
       throw createHttpError(400, error.details[0].message);
     }
 
-    const { date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+    const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+
+    // Check if developer exists
+    const developer = await prisma.developer.findUnique({
+      where: { id: developerId },
+    });
+
+    if (!developer) {
+      throw createHttpError(404, 'Developer not found');
+    }
 
     // Check if task already exists for this date and developer
     const existingTask = await prisma.task.findFirst({
       where: {
-        developerId: req.user.id,
-        date: new Date(date)
-      }
+        developerId,
+        date: new Date(date),
+      },
     });
 
     if (existingTask) {
-      throw createHttpError(409, 'Task already exists for this date');
+      throw createHttpError(409, 'Task already exists for this date and developer');
     }
 
     const task = await prisma.task.create({
       data: {
-        developerId: req.user.id,
+        developerId,
         date: new Date(date),
         project,
         role,
         team,
         targetsGiven,
         targetsAchieved,
-        status, // Removed 'as TaskStatus'
-        submittedAt: new Date()
+        status,
+        submittedAt: new Date(),
       },
       include: {
         developer: {
           select: {
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     res.status(201).json({
-      message: 'Task created successfully',
-      task
+      message: 'Task created successfully by admin',
+      task,
     });
-
   } catch (error) {
-    console.error('Task creation error:', error);
+    console.error('Admin Task creation error:', error);
     if (error instanceof createHttpError.HttpError) {
       res.status(error.statusCode).json({ error: error.message });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to create task',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   }
 });
+
+// PUT /api/tasks/admin/:id - Update an existing task
+router.put('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.id, 10);
+    if (isNaN(taskId)) {
+      throw createHttpError(400, 'Invalid Task ID');
+    }
+
+    // Validate request body
+    const { error, value } = taskSchema.validate(req.body);
+    if (error) {
+      throw createHttpError(400, error.details[0].message);
+    }
+
+    const { developerId, date, project, role, team, targetsGiven, targetsAchieved, status } = value;
+
+    // Check if task exists
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existingTask) {
+      throw createHttpError(404, 'Task not found');
+    }
+
+    // If developerId is being updated, ensure the new developer exists
+    if (developerId && developerId !== existingTask.developerId) {
+      const developer = await prisma.developer.findUnique({
+        where: { id: developerId },
+      });
+
+      if (!developer) {
+        throw createHttpError(404, 'New Developer not found');
+      }
+    }
+
+    // Check for duplicate task on update
+    const duplicateTask = await prisma.task.findFirst({
+      where: {
+        developerId: developerId || existingTask.developerId,
+        date: new Date(date),
+        NOT: { id: taskId },
+      },
+    });
+
+    if (duplicateTask) {
+      throw createHttpError(409, 'Another task already exists for this date and developer');
+    }
+
+    const updatedTask = await prisma.task.update({
+      where: { id: taskId },
+      data: {
+        developerId: developerId || existingTask.developerId,
+        date: new Date(date),
+        project,
+        role,
+        team,
+        targetsGiven,
+        targetsAchieved,
+        status,
+        // Update submittedAt only if the status is not Pending
+        submittedAt: status !== 'Pending' ? new Date() : existingTask.submittedAt,
+      },
+      include: {
+        developer: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: 'Task updated successfully by admin',
+      task: updatedTask,
+    });
+  } catch (error) {
+    console.error('Admin Task update error:', error);
+    if (error instanceof createHttpError.HttpError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      res.status(500).json({
+        error: 'Failed to update task',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+});
+
+// DELETE /api/tasks/admin/:id - Delete a task
+router.delete('/admin/:id', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.id, 10);
+    if (isNaN(taskId)) {
+      throw createHttpError(400, 'Invalid Task ID');
+    }
+
+    // Check if task exists
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existingTask) {
+      throw createHttpError(404, 'Task not found');
+    }
+
+    await prisma.task.delete({
+      where: { id: taskId },
+    });
+
+    res.status(200).json({
+      message: 'Task deleted successfully by admin',
+    });
+  } catch (error) {
+    console.error('Admin Task deletion error:', error);
+    if (error instanceof createHttpError.HttpError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      res.status(500).json({
+        error: 'Failed to delete task',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
+});
+
+// GET /api/tasks/admin - Get all tasks (admin only)
+router.get('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const tasks = await prisma.task.findMany({
+      include: {
+        developer: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error('Admin Get Tasks error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch tasks',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// Existing Routes ...
 
 // GET /user - Get tasks for the logged-in user
 router.get('/user', authMiddleware, async (req, res, next) => {
@@ -92,7 +236,15 @@ router.get('/user', authMiddleware, async (req, res, next) => {
       },
       orderBy: {
         date: 'desc'
-      }
+      },
+      include: {
+        developer: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
     res.json(tasks);
   } catch (err) {

@@ -31,7 +31,7 @@ model Task {
   targetsGiven    String
   targetsAchieved String
   status          TaskStatus  @default(Pending)
-  submittedAt     DateTime    @default(now())  // Ensure this field is present
+  submittedAt     DateTime    @default(now())
   developer       Developer   @relation("DeveloperToTasks", fields: [developerId], references: [id])
 
   @@index([developerId])
@@ -52,5 +52,6 @@ model Admin {
   email     String   @unique
   phone     String?
   password  String
+  role      String   @default("admin") // Added default value
   createdAt DateTime @default(now())
 }

@@ -1,20 +1,28 @@
 // backend/middleware/authMiddleware.js
 import jwt from 'jsonwebtoken';
+import createHttpError from 'http-errors';
 
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  if (token == null) return res.sendStatus(401);
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next(createHttpError(401, 'Unauthorized: No token provided'));
+  }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('Token verification error:', err);
-      return res.sendStatus(403);
-    }
-    req.user = user;
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Attach user information to the request
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role, // Ensure the role is included in the JWT payload
+    };
     next();
-  });
+  } catch (error) {
+    return next(createHttpError(401, 'Unauthorized: Invalid token'));
+  }
 };
 
 export default authMiddleware;

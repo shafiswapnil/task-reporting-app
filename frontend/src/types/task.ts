@@ -15,17 +15,22 @@ export interface Task {
   developerId: number;
   team: string;
   role: string;
-  submittedAt: string; // Added field
+  submittedAt: string;
+  developer: {
+    name: string;
+    email: string;
+  };
 }
 
 export interface NewTask {
+  developerId: number;
   date: string;
   project: string;
+  role: string;
+  team: string;
   targetsGiven: string;
   targetsAchieved: string;
   status: TaskStatus;
-  team: string;
-  role: string;
 }
 
 export interface TaskSubmissionStatus {

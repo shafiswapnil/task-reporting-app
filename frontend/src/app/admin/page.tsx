@@ -1,48 +1,32 @@
 "use client";
 
-import withAuth from '@/components/withAuth';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
+import TaskForm from '@/components/TaskForm';
+import TaskList from '@/components/TaskList';
+import MissingReportsCalendar from '@/components/MissingReportsCalendar';
+import withAuth from '@/components/withAuth';
 
 const AdminDashboard = () => {
-  const [developers, setDevelopers] = useState([]);
-  const [tasks, setTasks] = useState([]);
   const { data: session } = useSession();
   const [reportType, setReportType] = useState('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [project, setProject] = useState('');
+  const [refreshTasks, setRefreshTasks] = useState(false); // Trigger to refresh tasks list
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [developersResponse, tasksResponse] = await Promise.all([
-          fetch('/api/developers'),
-          fetch('/api/tasks')
-        ]);
-
-        if (!developersResponse.ok || !tasksResponse.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const developersData = await developersResponse.json();
-        const tasksData = await tasksResponse.json();
-
-        setDevelopers(developersData);
-        setTasks(tasksData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
-    if (session) {
-      fetchData();
-    }
+    // Optionally, fetch initial data or perform other side effects
   }, [session]);
 
   const generateReport = async () => {
+    if (!startDate || !endDate) {
+      alert('Please select both start and end dates.');
+      return;
+    }
+
     try {
       // Construct the query string
       const queryParams = new URLSearchParams({
@@ -52,10 +36,17 @@ const AdminDashboard = () => {
         project,
       }).toString();
 
-      const response = await fetch(`/api/reports?${queryParams}`);
+      const response = await fetch(`/api/reports?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Adjust as per your auth implementation
+        },
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to generate report');
+        const resData = await response.json();
+        throw new Error(resData.error || 'Failed to generate report');
       }
+
       const data = await response.json();
 
       // Generate PDF using jsPDF
@@ -73,7 +64,7 @@ const AdminDashboard = () => {
           task.project,
           task.targetsGiven,
           task.targetsAchieved,
-          task.status,
+          task.status.replace(/([A-Z])/g, ' $1').trim(),
         ]),
         startY: 45,
       });
@@ -81,40 +72,59 @@ const AdminDashboard = () => {
       // Save the PDF
       doc.save(`${reportType}_report_${startDate}_to_${endDate}.pdf`);
 
-      // Optionally, you can set a success message in the state
-      // setMessage('Report generated successfully');
-    } catch (error) {
+      alert('Report generated successfully');
+    } catch (error: any) {
       console.error('Error generating report:', error);
-      // Optionally, you can set an error message in the state
-      // setError('Failed to generate report. Please try again.');
+      alert(error.message || 'Failed to generate report. Please try again.');
+    }
+  };
+
+  const handleAddTask = async (taskData: any) => {
+    try {
+      const response = await fetch('/api/tasks/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Adjust as per your auth implementation
+        },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        const resData = await response.json();
+        throw new Error(resData.error || 'Failed to create task');
+      }
+
+      const resData = await response.json();
+      alert(resData.message);
+      setRefreshTasks(!refreshTasks);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Failed to create task');
     }
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Add New Developer</h2>
-        <form onSubmit={handleAddDeveloper} className="space-y-2">
-          {/* Add form inputs for all developer fields */}
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Add Developer</button>
-        </form>
-      </div>
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Developers</h2>
-        {/* Add a table or list to display developers */}
-      </div>
+      {/* Task Management Section */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">Manage Tasks</h2>
+        <div className="mb-6 p-4 border rounded-md bg-gray-100 dark:bg-gray-800">
+          <h3 className="text-lg font-medium mb-2">Add New Task</h3>
+          <TaskForm
+            onSubmit={handleAddTask}
+            submitLabel="Create Task"
+          />
+        </div>
+        <TaskList refreshTrigger={refreshTasks} setRefreshTrigger={setRefreshTasks} />
+      </section>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Tasks</h2>
-        {/* Add a table or list to display tasks */}
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Generate Report</h2>
-        <div className="space-y-2">
+      {/* Generate Report Section */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">Generate Reports</h2>
+        <div className="space-y-4">
           <select 
             value={reportType} 
             onChange={(e) => setReportType(e.target.value)}
@@ -129,12 +139,14 @@ const AdminDashboard = () => {
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)}
             className="border p-2 rounded"
+            placeholder="Start Date"
           />
           <input 
             type="date" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)}
             className="border p-2 rounded"
+            placeholder="End Date"
           />
           <input 
             type="text" 
@@ -145,12 +157,18 @@ const AdminDashboard = () => {
           />
           <button 
             onClick={generateReport} 
-            className="bg-green-500 text-white px-4 py-2 rounded"
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
           >
             Generate Report
           </button>
         </div>
-      </div>
+      </section>
+
+      {/* Missing Reports Calendar - Optional */}
+      <MissingReportsCalendar 
+        weekdays={[]} // Ensure to pass the correct weekdays if needed
+        onDateSelect={() => { /* Implement if needed */ }}
+      />
     </div>
   );
 };
