@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { check, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import authMiddleware from '../middleware/authMiddleware.js';
+import createHttpError from 'http-errors';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -75,58 +76,84 @@ router.post(
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-  try {
-    // Check if user exists (could be admin or developer)
-    let user = await prisma.admin.findUnique({ where: { email } });
-    let role = 'admin';
-    
-    if (!user) {
-      user = await prisma.developer.findUnique({ where: { email } });
-      role = 'developer';
+        // Log the attempt
+        console.log('Login attempt for:', email);
+
+        // First, try to find a developer
+        let user = await prisma.developer.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                password: true,
+                name: true,
+                role: true
+            }
+        });
+
+        // If not found as developer, try admin
+        if (!user) {
+            user = await prisma.admin.findUnique({
+                where: { email },
+                select: {
+                    id: true,
+                    email: true,
+                    password: true,
+                    name: true,
+                    role: true
+                }
+            });
+        }
+
+        // If no user found at all
+        if (!user) {
+            console.log('No user found with email:', email);
+            throw createHttpError(401, 'Invalid credentials');
+        }
+
+        // Log found user (without password)
+        console.log('Found user:', { ...user, password: '[HIDDEN]' });
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+            console.log('Invalid password for user:', email);
+            throw createHttpError(401, 'Invalid credentials');
+        }
+
+        // Generate token
+        const token = jwt.sign(
+            {
+                id: user.id,
+                email: user.email,
+                role: user.role || 'developer', // Default to developer if role not set
+                isAdmin: user.role === 'admin'
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Send response
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role || 'developer',
+                isAdmin: user.role === 'admin'
+            }
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(error.status || 500).json({
+            error: error.message || 'Internal server error'
+        });
     }
-
-    if (!user) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
-    }
-
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
-    }
-
-    // Create JWT payload
-    const payload = {
-      id: user.id,
-      email: user.email,
-      role: role,
-      name: user.name
-    };
-
-    // Generate and sign the token
-    const token = jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    // Return the token and user info
-    res.json({
-      accessToken: token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: role,
-        name: user.name
-      }
-    });
-
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ msg: 'Server error', error: err.message });
-  }
 });
 
 // POST /api/auth/register-developer
@@ -260,6 +287,74 @@ router.get('/protected-data', authMiddleware, async (req, res) => {
     console.error('Error:', err.message);
     res.status(500).send('Server error');
   }
+});
+
+// Registration route
+router.post('/register', async (req, res) => {
+    try {
+        const { 
+            name, 
+            email, 
+            password,
+            phoneNumber,
+            fullTime,
+            team,
+            projects,
+            workingDays 
+        } = req.body;
+
+        // Check if developer already exists
+        const existingDeveloper = await prisma.developer.findUnique({
+            where: { email }
+        });
+
+        if (existingDeveloper) {
+            throw createHttpError(409, 'Email already registered');
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create new developer
+        const developer = await prisma.developer.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                phoneNumber,
+                fullTime,
+                team,
+                projects,
+                workingDays,
+                role: 'developer' // Default role
+            }
+        });
+
+        // Generate token
+        const token = jwt.sign(
+            { 
+                id: developer.id, 
+                email: developer.email,
+                role: 'developer'
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Return response without password
+        const { password: _, ...developerWithoutPassword } = developer;
+        res.status(201).json({
+            message: 'Developer registered successfully',
+            token,
+            developer: developerWithoutPassword
+        });
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(error.status || 500).json({
+            error: error.message || 'Failed to register developer'
+        });
+    }
 });
 
 export default router;

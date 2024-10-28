@@ -7,16 +7,16 @@ export type TaskStatus =
 
 export interface Task {
   id: number;
+  developerId: number;
   date: string;
   project: string;
+  role: string;
+  team: string;
   targetsGiven: string;
   targetsAchieved: string;
   status: TaskStatus;
-  developerId: number;
-  team: string;
-  role: string;
   submittedAt: string;
-  developer: {
+  developer?: {
     name: string;
     email: string;
   };

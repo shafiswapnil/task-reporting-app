@@ -9,6 +9,7 @@ import taskRoutes from './routes/tasks.js';
 import adminRoutes from './routes/admin.js';
 import reportRoutes from './routes/reports.js';
 import { PrismaClient } from '@prisma/client';
+import createHttpError from 'http-errors';
 
 // Load environment variables
 dotenv.config();
@@ -20,10 +21,7 @@ const prisma = new PrismaClient();
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 
 // Routes
@@ -36,6 +34,11 @@ app.use('/api/reports', reportRoutes);
 // Home route for testing
 app.get('/', (req, res) => {
   res.send('Welcome to the Task Reporting API');
+});
+
+// 404 Handler
+app.use((req, res, next) => {
+    next(createHttpError(404, 'Route not found'));
 });
 
 // Error handler

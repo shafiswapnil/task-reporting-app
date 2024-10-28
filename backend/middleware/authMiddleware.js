@@ -1,27 +1,38 @@
 // backend/middleware/authMiddleware.js
 import jwt from 'jsonwebtoken';
 import createHttpError from 'http-errors';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const authMiddleware = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(createHttpError(401, 'Unauthorized: No token provided'));
-  }
-
-  const token = authHeader.split(' ')[1];
-
   try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw createHttpError(401, 'Authorization header missing or invalid');
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Attach user information to the request
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role, // Ensure the role is included in the JWT payload
-    };
+
+    // Check if user exists
+    const user = await prisma.developer.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        role: true
+      }
+    });
+
+    if (!user) {
+      throw createHttpError(401, 'User not found');
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    return next(createHttpError(401, 'Unauthorized: Invalid token'));
+    next(createHttpError(401, 'Invalid or expired token'));
   }
 };
 

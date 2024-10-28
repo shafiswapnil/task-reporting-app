@@ -10,35 +10,28 @@ class Developer {
       data: {
         ...data,
         password: hashedPassword,
-      },
+        role: 'developer',
+      }
     });
   }
 
   static async findByEmail(email) {
     return prisma.developer.findUnique({
       where: { email },
+      include: {
+        tasks: true
+      }
     });
   }
 
   static async findById(id) {
     return prisma.developer.findUnique({
       where: { id },
-    });
-  }
-
-  static async update(id, data) {
-    return prisma.developer.update({
-      where: { id },
-      data,
-    });
-  }
-
-  static async delete(id) {
-    return prisma.developer.delete({
-      where: { id },
+      include: {
+        tasks: true
+      }
     });
   }
 }
 
 export default Developer;
-
