@@ -14,7 +14,7 @@ const TaskSubmissionPage = () => {
     date: '',
     targetsGiven: '',
     targetsAchieved: '',
-    status: 'Pending',
+    status: TaskStatus.Pending,
   });
   const [message, setMessage] = useState('');
   const [submittedTasks, setSubmittedTasks] = useState([]);

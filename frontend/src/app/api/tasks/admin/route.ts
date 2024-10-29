@@ -10,7 +10,7 @@ export async function handler(req: Request) {
   }
 
   // Modify the request to include the bearer token
-  const backendUrl = `http://localhost:5001${new URL(url).pathname}`;
+  const backendUrl = `${process.env.BACKEND_URL}${new URL(url).pathname}`;
 
   try {
     const response = await fetch(backendUrl, {

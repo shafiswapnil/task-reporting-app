@@ -6,11 +6,9 @@ const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001/ap
 
 const axiosInstance = axios.create({
     baseURL,
-    withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
-    },
-    timeout: 10000
+    }
 });
 
 // Custom error handler
@@ -31,16 +29,11 @@ const handleApiError = (error: any, context: string) => {
 // Request interceptor
 axiosInstance.interceptors.request.use(
     async (config) => {
-        try {
-            const session = await getSession();
-            if (session?.user?.accessToken) {
-                config.headers = config.headers || {};
-                config.headers['Authorization'] = `Bearer ${session.user.accessToken}`;
-            }
-            return config;
-        } catch (error) {
-            return Promise.reject(error);
+        const session = await getSession();
+        if (session?.user?.accessToken) {
+            config.headers.Authorization = `Bearer ${session.user.accessToken}`;
         }
+        return config;
     },
     (error) => Promise.reject(error)
 );
@@ -62,74 +55,24 @@ axiosInstance.interceptors.response.use(
 // Developer API Methods
 const getDeveloperTasks = async (): Promise<Task[]> => {
     try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-        // Get tasks for the specific developer
-        const response = await axiosInstance.get<Task[]>(`/tasks?email=${encodeURIComponent(session.user.email)}`);
+        const response = await axiosInstance.get<Task[]>('/tasks');
         return response.data;
     } catch (error) {
         return handleApiError(error, 'Error fetching tasks');
     }
 };
 
-const createTask = async (taskData: Partial<NewTask>): Promise<Task> => {
+const createTask = async (taskData: NewTask): Promise<Task> => {
     try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-
-        // Validate required fields
-        if (!taskData.date || !taskData.project || !taskData.targetsGiven) {
-            throw new Error('Missing required fields');
-        }
-
-        const fullTaskData = {
-            ...taskData,
-            developerEmail: session.user.email, // Always use the logged-in user's email
-            status: taskData.status || 'Pending' as TaskStatus
-        };
-
-        const response = await axiosInstance.post<Task>('/tasks', fullTaskData);
+        const response = await axiosInstance.post<Task>('/tasks', taskData);
         return response.data;
     } catch (error) {
         return handleApiError(error, 'Error creating task');
     }
 };
 
-// const updateTask = async (taskId: string, taskData: Partial<UpdateTask>): Promise<Task> => {
-//     try {
-//         const session = await getSession();
-//         if (!session?.user?.email) {
-//             throw new Error('User email not found');
-//         }
-
-//         // First verify if the task belongs to the developer
-//         const currentTask = await axiosInstance.get<Task>(`/tasks/${taskId}`);
-//         if (currentTask.data.developerEmail !== session.user.email) {
-//             throw new Error('Unauthorized: Cannot update task that belongs to another developer');
-//         }
-
-//         const fullTaskData = {
-//             ...taskData,
-//             developerEmail: session.user.email // Ensure developer email remains unchanged
-//         };
-
-//         const response = await axiosInstance.put<Task>(`/tasks/${taskId}`, fullTaskData);
-//         return response.data;
-//     } catch (error) {
-//         return handleApiError(error, 'Error updating task');
-//     }
-// };
-const updateTask = async (taskId: string, taskData: Partial<UpdateTask>): Promise<Task> => {
+const updateTask = async (taskId: number, taskData: UpdateTask): Promise<Task> => {
     try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-
         const response = await axiosInstance.put<Task>(`/tasks/${taskId}`, taskData);
         return response.data;
     } catch (error) {
@@ -137,7 +80,7 @@ const updateTask = async (taskId: string, taskData: Partial<UpdateTask>): Promis
     }
 };
 
-const deleteTask = async (taskId: string): Promise<void> => {
+const deleteTask = async (taskId: number): Promise<void> => {
     try {
         const session = await getSession();
         if (!session?.user?.email) {
@@ -146,7 +89,7 @@ const deleteTask = async (taskId: string): Promise<void> => {
 
         // First verify if the task belongs to the developer
         const currentTask = await axiosInstance.get<Task>(`/tasks/${taskId}`);
-        if (currentTask.data.developerEmail !== session.user.email) {
+        if (currentTask.data.developer?.email !== session.user.email) {
             throw new Error('Unauthorized: Cannot delete task that belongs to another developer');
         }
 

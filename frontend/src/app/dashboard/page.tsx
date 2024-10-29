@@ -75,7 +75,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpdateTask = async (taskId: string, taskData: Partial<Task>) => {
+  const handleUpdateTask = async (taskId: number, taskData: Partial<Task>) => {
     try {
       await updateTask(taskId, taskData);
       await fetchTasks();
@@ -86,7 +86,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = async (taskId: number) => {
     try {
       await deleteTask(taskId);
       await fetchTasks();
