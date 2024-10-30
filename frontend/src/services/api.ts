@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { getSession } from 'next-auth/react';
 import { Task, NewTask, UpdateTask } from '@/types/task';
+import { Session } from 'next-auth';
 
 const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001/api';
 
@@ -12,7 +13,7 @@ const axiosInstance = axios.create({
 });
 
 // Custom error handler
-const handleApiError = (error: any, context: string) => {
+const handleApiError = (error: any, context: string = 'API Error') => {
     if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         console.error(`${context}:`, {
@@ -37,7 +38,7 @@ axiosInstance.interceptors.request.use(
         return config;
     },
     (error) => {
-        return Promise.reject(error);
+        return Promise.reject(handleApiError(error, 'Request Interceptor Error'));
     }
 );
 
@@ -50,28 +51,25 @@ axiosInstance.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
-        return Promise.reject(error);
+        return Promise.reject(handleApiError(error, 'Response Interceptor Error'));
     }
 );
 
 // Task APIs
-const getDeveloperTasks = async (): Promise<Task[]> => {
+const getDeveloperTasks = async (session: Session | null) => {
+    if (!session?.user?.email) {
+        throw new Error('No user email found');
+    }
+  
     try {
-        const session = await getSession();
-        console.log('Current session:', session); // Debug log
-
-        if (!session?.user?.email) {
-            throw new Error('No authenticated user found');
-        }
-
-        console.log('Making API request to /tasks/submitted'); // Debug log
-        const response = await axiosInstance.get('/tasks/submitted');
-        console.log('API response:', response.data); // Debug log
-        
+        const response = await axiosInstance.get('/tasks/submitted', {
+            params: {
+                email: session.user.email
+            }
+        });
         return response.data;
     } catch (error) {
-        console.error('Full error in getDeveloperTasks:', error);
-        throw handleApiError(error, 'Error fetching tasks');
+        throw handleApiError(error, 'Error fetching developer tasks');
     }
 };
 
@@ -85,7 +83,6 @@ const createTask = async (task: NewTask): Promise<Task> => {
         const response = await axiosInstance.post('/tasks', task);
         return response.data;
     } catch (error) {
-        console.error('Full error:', error);
         throw handleApiError(error, 'Error creating task');
     }
 };
@@ -152,6 +149,18 @@ const getDeveloperDetails = async (email: string) => {
     }
 };
 
+// Add this to your existing API functions
+const getMissingReports = async (email: string) => {
+    try {
+        const response = await axiosInstance.get('/reports/missing', {
+            params: { email }
+        });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error, 'Error fetching missing reports');
+    }
+};
+
 export {
     getDeveloperTasks,
     createTask,
@@ -161,7 +170,8 @@ export {
     getAdminTasks,
     updateAdminTask,
     deleteAdminTask,
-    getDeveloperDetails
+    getDeveloperDetails,
+    getMissingReports
 };
 
 export default axiosInstance;

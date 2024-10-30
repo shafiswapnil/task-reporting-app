@@ -2,20 +2,22 @@ import 'next-auth';
 
 declare module 'next-auth' {
   interface Session {
-    accessToken?: string;
     user: {
+      id: number;
       email: string;
-      name?: string;
-      image?: string;
+      name: string;
+      role: string;
     };
+    accessToken: string;
+    expires: string;
   }
 
   interface User {
-    id: string | number;
+    id: number;
     email: string;
-    token: string;
+    name: string;
     role: string;
-    name?: string;
+    token: string;
   }
 }
 

@@ -8,6 +8,7 @@ import TaskList from '@/components/TaskList';
 import MissingReportsCalendar from '@/components/MissingReportsCalendar';
 import { Task, NewTask, UpdateTask } from '@/types/task';
 import { getDeveloperTasks, createTask, updateTask, deleteTask } from '@/services/api';
+import { SessionDebug } from '@/components/SessionDebug';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -36,11 +37,23 @@ export default function Dashboard() {
     console.log('Session data:', session);
 
     if (status === 'authenticated' && session?.user?.email) {
+      console.log('Fetching tasks for user:', session.user.email);
       fetchTasks();
     } else if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, session, router]);
+
+  useEffect(() => {
+    // Debug logs
+    console.log('=== Session Debug ===');
+    console.log('Status:', status);
+    console.log('Full Session:', session);
+    console.log('User:', session?.user);
+    console.log('Email:', session?.user?.email);
+    console.log('Access Token:', session?.accessToken);
+    console.log('===================');
+  }, [session, status]);
 
   const handleCreateTask = async (taskData: NewTask) => {
     try {
@@ -147,6 +160,8 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <SessionDebug />
     </>
   );
 }

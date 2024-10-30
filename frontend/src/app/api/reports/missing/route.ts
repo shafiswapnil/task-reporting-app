@@ -1,20 +1,21 @@
-import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email');
 
-    const backendUrl = `${process.env.BACKEND_URL}/api/reports/missing?email=${email}`;
-    const response = await fetch(backendUrl, {
+    const response = await fetch(`${process.env.API_URL}/api/reports/missing?email=${email}`, {
       headers: {
-        'Authorization': `Bearer ${token.accessToken}`,
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
       },
     });
 
@@ -24,8 +25,11 @@ export async function GET(req: Request) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Missing reports API error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch missing reports' },
+      { status: 500 }
+    );
   }
 }
