@@ -45,30 +45,16 @@ const adminTaskSchema = Joi.object({
 // Submit a new task (Developer)
 router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
     try {
-        console.log('Received task data:', req.body);
+        const { date, project, targetsGiven, targetsAchieved, status, developerEmail } = req.body;
 
-        const { error, value } = developerTaskSchema.validate(req.body);
-        if (error) {
-            throw createHttpError(400, error.details[0].message);
-        }
-
-        const { date, project, targetsGiven, targetsAchieved, status, developerEmail } = value;
-
-        if (!developerEmail) {
-            throw createHttpError(400, 'Developer email is required');
-        }
-
+        // Find developer by email
         const developer = await prisma.developer.findUnique({
-            where: { 
-                email: developerEmail // Use email from request body
-            }
+            where: { email: developerEmail }
         });
 
         if (!developer) {
-            throw createHttpError(404, 'Developer not found');
+            return res.status(404).json({ error: 'Developer not found' });
         }
-
-        console.log('Found developer:', developer); // Debug log
 
         const task = await prisma.task.create({
             data: {
@@ -80,7 +66,7 @@ router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
                 developerId: developer.id,
                 role: developer.role,
                 team: developer.team
-            },
+            }
         });
 
         res.status(201).json(task);
@@ -437,6 +423,84 @@ router.put('/:id', apiLimiter, authMiddleware, async (req, res, next) => {
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined,
             });
         }
+    }
+});
+
+// GET /api/tasks/developer
+router.get('/developer', authMiddleware, async (req, res) => {
+    try {
+        const tasks = await prisma.task.findMany({
+            where: {
+                developer: {
+                    email: req.user.email
+                }
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+        res.json(tasks);
+    } catch (error) {
+        console.error('Error fetching developer tasks:', error);
+        res.status(500).json({ error: 'Failed to fetch tasks' });
+    }
+});
+
+// POST /api/tasks/developer
+router.post('/developer', authMiddleware, async (req, res) => {
+    try {
+        const { error, value } = developerTaskSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        const developer = await prisma.developer.findUnique({
+            where: { email: value.developerEmail }
+        });
+
+        if (!developer) {
+            return res.status(404).json({ error: 'Developer not found' });
+        }
+
+        const task = await prisma.task.create({
+            data: {
+                date: new Date(value.date),
+                project: value.project,
+                targetsGiven: value.targetsGiven,
+                targetsAchieved: value.targetsAchieved,
+                status: value.status,
+                developerId: developer.id,
+                submittedAt: new Date()
+            }
+        });
+
+        res.status(201).json(task);
+    } catch (error) {
+        console.error('Error creating task:', error);
+        res.status(500).json({ error: 'Failed to create task' });
+    }
+});
+
+// GET /tasks/submitted - Get tasks for logged-in developer
+router.get('/submitted', authMiddleware, async (req, res) => {
+    try {
+        const tasks = await prisma.task.findMany({
+            where: {
+                developerId: req.user.id // Make sure this matches your auth middleware
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+        
+        console.log('Found tasks:', tasks); // Add this for debugging
+        res.json(tasks);
+    } catch (error) {
+        console.error('Error in /tasks/submitted:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch tasks',
+            details: error.message 
+        });
     }
 });
 

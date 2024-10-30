@@ -1,92 +1,97 @@
 "use client";
 
 import { useState } from 'react';
-import { Task } from '@/types/task';
-import { NewTask } from '@/types/task';
+import { Task, NewTask, TaskStatus } from '@/types/task';
 
 interface TaskFormProps {
   onSubmit: (task: NewTask) => Promise<void>;
-  initialData?: Partial<Task>;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData }) => {
+const TaskForm: React.FC<TaskFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState<NewTask>({
-    date: initialData?.date || '',
-    project: initialData?.project || '',
-    targetsGiven: initialData?.targetsGiven || '',
-    targetsAchieved: initialData?.targetsAchieved || '',
-    status: initialData?.status || 'Pending'
+    date: '',
+    project: '',
+    targetsGiven: '',
+    targetsAchieved: '',
+    status: TaskStatus.Pending
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(formData);
+    try {
+      await onSubmit(formData);
+      setFormData({
+        date: '',
+        project: '',
+        targetsGiven: '',
+        targetsAchieved: '',
+        status: TaskStatus.Pending
+      });
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+        <label className="block mb-1">Date</label>
         <input
           type="date"
           value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          onChange={(e) => setFormData({...formData, date: e.target.value})}
           required
+          className="w-full p-2 border rounded"
         />
       </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+        <label className="block mb-1">Project</label>
         <input
           type="text"
           value={formData.project}
-          onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          onChange={(e) => setFormData({...formData, project: e.target.value})}
           required
+          className="w-full p-2 border rounded"
         />
       </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Targets Given</label>
+        <label className="block mb-1">Targets Given</label>
         <textarea
           value={formData.targetsGiven}
-          onChange={(e) => setFormData({ ...formData, targetsGiven: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-          rows={3}
+          onChange={(e) => setFormData({...formData, targetsGiven: e.target.value})}
           required
+          className="w-full p-2 border rounded"
+          rows={3}
         />
       </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Targets Achieved</label>
+        <label className="block mb-1">Targets Achieved</label>
         <textarea
           value={formData.targetsAchieved}
-          onChange={(e) => setFormData({ ...formData, targetsAchieved: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-          rows={3}
+          onChange={(e) => setFormData({...formData, targetsAchieved: e.target.value})}
           required
+          className="w-full p-2 border rounded"
+          rows={3}
         />
       </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <label className="block mb-1">Status</label>
         <select
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          onChange={(e) => setFormData({...formData, status: e.target.value as TaskStatus})}
           required
+          className="w-full p-2 border rounded"
         >
-          <option value="Pending">Pending</option>
-          <option value="Completed">Completed</option>
-          <option value="PartiallyCompleted">Partially Completed</option>
-          <option value="Failed">Failed</option>
+          {Object.values(TaskStatus).map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
         </select>
       </div>
-
       <button
         type="submit"
-        className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+        className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
       >
         Submit Task
       </button>

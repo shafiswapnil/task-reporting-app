@@ -1,44 +1,34 @@
 export enum TaskStatus {
-  Completed = 'Completed',
-  Unfinished = 'Unfinished',
-  Pending = 'Pending',
-  Dependent = 'Dependent',
-  PartiallyCompleted = 'PartiallyCompleted'
+    Completed = 'Completed',
+    Pending = 'Pending',
+    PartiallyCompleted = 'Partially Completed',
+    Unfinished = 'Unfinished',
+    Dependent = 'Dependent'
 }
 
 export interface Task {
-  id: number;
-  developerId: number;
-  date: string;
-  project: string;
-  role: string;
-  team: string;
-  targetsGiven: string;
-  targetsAchieved: string;
-  status: TaskStatus;
-  submittedAt: string;
-  developer?: {
-    name: string;
-    email: string;
-  };
+    id: number;
+    date: string;
+    project: string;
+    targetsGiven: string;
+    targetsAchieved: string;
+    status: TaskStatus;
+    developerId: number;
+    submittedAt: string;
 }
 
 export interface NewTask {
-  date: string;
-  project: string;
-  targetsGiven: string;
-  targetsAchieved: string;
-  status: TaskStatus;
-  developerEmail?: string;
+    date: string;
+    project: string;
+    targetsGiven: string;
+    targetsAchieved: string;
+    status: TaskStatus;
 }
 
-export interface TaskSubmissionStatus {
-  date: string;
-  submitted: boolean;
-}
-
-// Add UpdateTask type
 export interface UpdateTask {
-  targetsAchieved?: string;
-  status?: TaskStatus;
+    date?: string;
+    project?: string;
+    targetsGiven?: string;
+    targetsAchieved?: string;
+    status?: TaskStatus;
 }

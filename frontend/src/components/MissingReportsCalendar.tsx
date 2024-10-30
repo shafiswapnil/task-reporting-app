@@ -1,105 +1,82 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { TaskSubmissionStatus } from '@/types/task';
 import { useSession } from 'next-auth/react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
-export default function MissingReportsCalendar() {
-  const [loading, setLoading] = useState(true);
-  const [submissionStatus, setSubmissionStatus] = useState<TaskSubmissionStatus[]>([]);
-  const [error, setError] = useState<string | null>(null);
+interface MissingDay {
+  date: Date;
+  reason: string;
+}
+
+const MissingReportsCalendar = () => {
   const { data: session } = useSession();
+  const [missingDays, setMissingDays] = useState<MissingDay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSubmissionStatus = async () => {
+    const fetchMissingReports = async () => {
       if (!session?.user?.email) return;
       
       try {
-        setLoading(true);
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
-
-        const response = await fetch(
-          `/api/tasks/submission-status?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&email=${encodeURIComponent(session.user.email)}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch submission status');
-        }
-
+        const response = await fetch(`/api/reports/missing?email=${session.user.email}`);
+        if (!response.ok) throw new Error('Failed to fetch missing reports');
+        
         const data = await response.json();
-        setSubmissionStatus(data);
-      } catch (error) {
-        console.error('Error fetching submission status:', error);
-        setError('Failed to load submission status');
+        setMissingDays(data.map((d: any) => ({
+          date: new Date(d.date),
+          reason: d.reason
+        })));
+      } catch (err) {
+        console.error('Error fetching missing reports:', err);
+        setError('Failed to load missing reports');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchSubmissionStatus();
+    fetchMissingReports();
   }, [session]);
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="bg-white rounded-lg p-4">
-        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg p-4">
-        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
-        <p className="text-red-500">{error}</p>
+      <div className="text-red-500 p-4 border border-red-300 rounded">
+        {error}
       </div>
     );
   }
 
-  // If no data is available yet, show placeholder grid
-  if (!submissionStatus || submissionStatus.length === 0) {
-    return (
-      <div className="bg-white rounded-lg p-4">
-        <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 30 }, (_, i) => (
-            <div
-              key={i}
-              className="p-2 rounded-md text-center bg-gray-100 text-gray-600"
-            >
-              {i + 1}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Show actual submission status data
   return (
-    <div className="bg-white rounded-lg p-4">
-      <h3 className="text-xl font-semibold mb-4">Report Status (Last 30 Days)</h3>
-      <div className="grid grid-cols-7 gap-2">
-        {submissionStatus.map((status, index) => (
-          <div
-            key={index}
-            className={`p-2 rounded-md text-center cursor-pointer
-              ${status.submitted ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-            onClick={() => {
-              // Handle date selection if needed
-              const date = new Date(status.date).toISOString().split('T')[0];
-              console.log('Selected date:', date);
-            }}
-          >
-            {new Date(status.date).getDate()}
-          </div>
-        ))}
-      </div>
+    <div className="border rounded-lg p-4 bg-white shadow-sm">
+      <Calendar
+        className="w-full"
+        tileClassName={({ date }) => {
+          const isMissing = missingDays.some(
+            d => d.date.toDateString() === date.toDateString()
+          );
+          return isMissing ? 'bg-red-100' : '';
+        }}
+        tileContent={({ date }) => {
+          const missing = missingDays.find(
+            d => d.date.toDateString() === date.toDateString()
+          );
+          return missing ? (
+            <div className="text-xs text-red-500">Missing</div>
+          ) : null;
+        }}
+      />
     </div>
   );
-}
+};
+
+export default MissingReportsCalendar;

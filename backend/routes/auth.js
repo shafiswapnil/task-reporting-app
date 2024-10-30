@@ -256,7 +256,13 @@ router.post(
         { expiresIn: 360000 },
         (err, token) => {
           if (err) throw err;
-          res.json({ token });
+          res.json({
+            token,
+            id: developer.id,
+            email: developer.email,
+            role: developer.role,
+            name: developer.name
+          });
         }
       );
     } catch (err) {

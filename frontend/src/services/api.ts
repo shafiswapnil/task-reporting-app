@@ -18,7 +18,8 @@ const handleApiError = (error: any, context: string) => {
         console.error(`${context}:`, {
             message: axiosError.message,
             status: axiosError.response?.status,
-            data: axiosError.response?.data
+            data: axiosError.response?.data,
+            url: axiosError.config?.url
         });
     } else {
         console.error(`${context}:`, error);
@@ -30,12 +31,14 @@ const handleApiError = (error: any, context: string) => {
 axiosInstance.interceptors.request.use(
     async (config) => {
         const session = await getSession();
-        if (session?.user?.accessToken) {
-            config.headers.Authorization = `Bearer ${session.user.accessToken}`;
+        if (session?.accessToken) {
+            config.headers.Authorization = `Bearer ${session.accessToken}`;
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        return Promise.reject(error);
+    }
 );
 
 // Response interceptor
@@ -43,7 +46,6 @@ axiosInstance.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
         if (error.response?.status === 401) {
-            // Only redirect if we're in a browser environment
             if (typeof window !== 'undefined') {
                 window.location.href = '/login';
             }
@@ -52,92 +54,84 @@ axiosInstance.interceptors.response.use(
     }
 );
 
-// Developer API Methods
+// Task APIs
 const getDeveloperTasks = async (): Promise<Task[]> => {
     try {
-        const response = await axiosInstance.get<Task[]>('/tasks');
+        const session = await getSession();
+        console.log('Current session:', session); // Debug log
+
+        if (!session?.user?.email) {
+            throw new Error('No authenticated user found');
+        }
+
+        console.log('Making API request to /tasks/submitted'); // Debug log
+        const response = await axiosInstance.get('/tasks/submitted');
+        console.log('API response:', response.data); // Debug log
+        
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error fetching tasks');
+        console.error('Full error in getDeveloperTasks:', error);
+        throw handleApiError(error, 'Error fetching tasks');
     }
 };
 
-const createTask = async (taskData: NewTask): Promise<Task> => {
+const createTask = async (task: NewTask): Promise<Task> => {
     try {
-        const response = await axiosInstance.post<Task>('/tasks', taskData);
+        const session = await getSession();
+        if (!session?.user?.email) {
+            throw new Error('User email not found');
+        }
+
+        const response = await axiosInstance.post('/tasks', task);
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error creating task');
+        console.error('Full error:', error);
+        throw handleApiError(error, 'Error creating task');
     }
 };
 
-const updateTask = async (taskId: number, taskData: UpdateTask): Promise<Task> => {
+const updateTask = async (taskId: number, task: UpdateTask): Promise<Task> => {
     try {
-        const response = await axiosInstance.put<Task>(`/tasks/${taskId}`, taskData);
+        const response = await axiosInstance.put(`/tasks/${taskId}`, task);
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error updating task');
+        throw handleApiError(error, 'Error updating task');
     }
 };
 
 const deleteTask = async (taskId: number): Promise<void> => {
     try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-
-        // First verify if the task belongs to the developer
-        const currentTask = await axiosInstance.get<Task>(`/tasks/${taskId}`);
-        if (currentTask.data.developer?.email !== session.user.email) {
-            throw new Error('Unauthorized: Cannot delete task that belongs to another developer');
-        }
-
         await axiosInstance.delete(`/tasks/${taskId}`);
     } catch (error) {
-        return handleApiError(error, 'Error deleting task');
+        throw handleApiError(error, 'Error deleting task');
     }
 };
 
-// Admin API Methods
+// Admin APIs
+const createAdminTask = async (task: NewTask): Promise<Task> => {
+    try {
+        const response = await axiosInstance.post('/tasks/admin', task);
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error, 'Error creating admin task');
+    }
+};
+
 const getAdminTasks = async (): Promise<Task[]> => {
     try {
-        const response = await axiosInstance.get<Task[]>('/tasks/admin');
+        const response = await axiosInstance.get('/tasks/admin');
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error fetching admin tasks');
+        throw handleApiError(error, 'Error fetching admin tasks');
     }
 };
 
-const createAdminTask = async (taskData: NewTask): Promise<Task> => {
+const updateAdminTask = async (taskId: number, task: UpdateTask): Promise<Task> => {
     try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-
-        if (!taskData.developerEmail) {
-            throw new Error('Developer email is required for admin task creation');
-        }
-
-        const response = await axiosInstance.post<Task>('/tasks/admin', taskData);
+        const response = await axiosInstance.put(`/tasks/admin/${taskId}`, task);
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error creating admin task');
-    }
-};
-
-const updateAdminTask = async (taskId: number, taskData: Partial<UpdateTask>): Promise<Task> => {
-    try {
-        const session = await getSession();
-        if (!session?.user?.email) {
-            throw new Error('User email not found');
-        }
-
-        const response = await axiosInstance.put<Task>(`/tasks/admin/${taskId}`, taskData);
-        return response.data;
-    } catch (error) {
-        return handleApiError(error, 'Error updating admin task');
+        throw handleApiError(error, 'Error updating admin task');
     }
 };
 
@@ -145,25 +139,20 @@ const deleteAdminTask = async (taskId: number): Promise<void> => {
     try {
         await axiosInstance.delete(`/tasks/admin/${taskId}`);
     } catch (error) {
-        return handleApiError(error, 'Error deleting admin task');
+        throw handleApiError(error, 'Error deleting admin task');
     }
 };
 
-// Developer Profile Methods
-const getDeveloperDetails = async (email: string): Promise<any> => {
+const getDeveloperDetails = async (email: string) => {
     try {
-        if (!email) {
-            throw new Error('Email is required');
-        }
-        const response = await axiosInstance.get(`/developers?email=${encodeURIComponent(email)}`);
+        const response = await axiosInstance.get(`/developers/${email}`);
         return response.data;
     } catch (error) {
-        return handleApiError(error, 'Error fetching developer details');
+        throw handleApiError(error, 'Error fetching developer details');
     }
 };
 
 export {
-    axiosInstance as default,
     getDeveloperTasks,
     createTask,
     updateTask,
@@ -172,5 +161,7 @@ export {
     getAdminTasks,
     updateAdminTask,
     deleteAdminTask,
-    getDeveloperDetails,
+    getDeveloperDetails
 };
+
+export default axiosInstance;

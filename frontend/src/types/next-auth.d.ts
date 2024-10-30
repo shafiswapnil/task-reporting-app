@@ -1,18 +1,21 @@
 import 'next-auth';
 
 declare module 'next-auth' {
-  interface User {
-    email: string;
-    accessToken: string;
-    role: string;
-  }
-
   interface Session {
+    accessToken?: string;
     user: {
       email: string;
-      accessToken: string;
-      role: string;
+      name?: string;
+      image?: string;
     };
+  }
+
+  interface User {
+    id: string | number;
+    email: string;
+    token: string;
+    role: string;
+    name?: string;
   }
 }
 
