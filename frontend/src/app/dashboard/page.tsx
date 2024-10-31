@@ -17,32 +17,26 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchTasks = async () => {
-    try {
-      console.log('Fetching tasks...');
-      const fetchedTasks = await getDeveloperTasks();
-      console.log('Fetched tasks:', fetchedTasks);
-      setTasks(fetchedTasks);
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setError('Failed to fetch tasks. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    console.log('Session status:', status);
-    console.log('Session data:', session);
+    const fetchTasks = async () => {
+      try {
+        console.log('Fetching tasks...');
+        if (status === 'authenticated' && session?.user?.email) {
+          const fetchedTasks = await getDeveloperTasks();
+          console.log('Fetched tasks:', fetchedTasks);
+          setTasks(fetchedTasks);
+          setError(null);
+        }
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        setError('Failed to fetch tasks. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    if (status === 'authenticated' && session?.user?.email) {
-      console.log('Fetching tasks for user:', session.user.email);
-      fetchTasks();
-    } else if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, session, router]);
+    fetchTasks();
+  }, [session, status]);
 
   useEffect(() => {
     // Debug logs

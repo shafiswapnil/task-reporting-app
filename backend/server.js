@@ -31,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/developers', developerRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/reports', reportRoutes);
+// app.use('/api/admin', adminRoutes);
 
 // Health Check Route
 app.get('/', (req, res) => {
