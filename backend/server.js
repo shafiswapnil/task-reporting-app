@@ -51,3 +51,6 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Add this near the top of your server.js file, after the imports
+process.env.TZ = 'Asia/Dhaka';

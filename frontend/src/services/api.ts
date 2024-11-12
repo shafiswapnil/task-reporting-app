@@ -156,11 +156,14 @@ const getDeveloperDetails = async (email: string) => {
 // Add this to your existing API functions
 const getMissingReports = async (email: string) => {
     try {
+        console.log('Calling getMissingReports for email:', email);
         const response = await axiosInstance.get('/api/reports/missing', {
             params: { email }
         });
+        console.log('getMissingReports response:', response.data);
         return response.data;
     } catch (error) {
+        console.error('getMissingReports error:', error);
         throw handleApiError(error, 'Error fetching missing reports');
     }
 };
