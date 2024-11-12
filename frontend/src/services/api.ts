@@ -91,10 +91,9 @@ const createTask = async (task: NewTask): Promise<Task> => {
     }
 };
 
-const updateTask = async (taskId: number, task: UpdateTask): Promise<Task> => {
+const updateTask = async (taskId: number, taskData: UpdateTask): Promise<Task> => {
     try {
-        const response = await axiosInstance.put(`/tasks/${taskId}`, task);
-        // const response = await axiosInstance.put(`/api/tasks/${taskId}`, task);
+        const response = await axiosInstance.put(`/api/tasks/${taskId}`, taskData);
         return response.data;
     } catch (error) {
         throw handleApiError(error, 'Error updating task');
@@ -103,7 +102,7 @@ const updateTask = async (taskId: number, task: UpdateTask): Promise<Task> => {
 
 const deleteTask = async (taskId: number): Promise<void> => {
     try {
-        await axiosInstance.delete(`/tasks/${taskId}`);
+        await axiosInstance.delete(`/api/tasks/${taskId}`);
     } catch (error) {
         throw handleApiError(error, 'Error deleting task');
     }

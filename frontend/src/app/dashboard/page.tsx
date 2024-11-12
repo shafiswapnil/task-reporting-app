@@ -8,7 +8,7 @@ import TaskList from '@/components/TaskList';
 import MissingReportsCalendar from '@/components/MissingReportsCalendar';
 import { Task, NewTask, UpdateTask } from '@/types/task';
 import { getDeveloperTasks, createTask, updateTask, deleteTask } from '@/services/api';
-import { SessionDebug } from '@/components/SessionDebug';
+// import { SessionDebug } from '@/components/SessionDebug';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -155,7 +155,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <SessionDebug />
+      {/* <SessionDebug /> */}
     </>
   );
 }
