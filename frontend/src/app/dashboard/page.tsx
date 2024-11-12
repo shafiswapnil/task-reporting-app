@@ -38,16 +38,16 @@ export default function Dashboard() {
     fetchTasks();
   }, [session, status]);
 
-  useEffect(() => {
-    // Debug logs
-    console.log('=== Session Debug ===');
-    console.log('Status:', status);
-    console.log('Full Session:', session);
-    console.log('User:', session?.user);
-    console.log('Email:', session?.user?.email);
-    console.log('Access Token:', session?.accessToken);
-    console.log('===================');
-  }, [session, status]);
+  // useEffect(() => {
+  //   // Debug logs
+  //   console.log('=== Session Debug ===');
+  //   console.log('Status:', status);
+  //   console.log('Full Session:', session);
+  //   console.log('User:', session?.user);
+  //   console.log('Email:', session?.user?.email);
+  //   console.log('Access Token:', session?.accessToken);
+  //   console.log('===================');
+  // }, [session, status]);
 
   const handleCreateTask = async (taskData: NewTask) => {
     try {
