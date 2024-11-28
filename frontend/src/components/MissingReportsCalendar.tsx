@@ -85,7 +85,7 @@ const MissingReportsCalendar = ({ weekdays = [], onDateSelect }: MissingReportsC
       const isMissing = date < new Date(todayBD) && missingDays.some(md => md.date === dateStr);
       const isToday = dateStr === todayBD;
       
-      console.log(`Checking date ${dateStr}: isMissing=${isMissing}`);
+      // console.log(`Checking date ${dateStr}: isMissing=${isMissing}`);
       
       days.push({
         date: day,

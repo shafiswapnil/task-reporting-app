@@ -23,6 +23,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask }
       setEditingTask(null);
     } catch (error) {
       console.error('Failed to update task:', error);
+      alert('Failed to update task. Please try again.');
     }
   };
 

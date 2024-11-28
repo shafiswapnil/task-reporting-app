@@ -94,7 +94,7 @@ const createTask = async (task: NewTask): Promise<Task> => {
 const updateTask = async (taskId: number, taskData: UpdateTask): Promise<Task> => {
     try {
         const response = await axiosInstance.put(`/api/tasks/${taskId}`, taskData);
-        return response.data;
+        return response.data.task;
     } catch (error) {
         throw handleApiError(error, 'Error updating task');
     }
