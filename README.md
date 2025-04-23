@@ -2,7 +2,7 @@
 
 A comprehensive task management and reporting system for development teams.
 
-# Project Structure
+## Project Structure
 
 ```
 task-reporting-webapp/
@@ -50,7 +50,6 @@ task-reporting-webapp/
 │   ├── public/           # Static assets
 │   └── package.json
 │
-├── docs/                 # Documentation
 ├── README.md
 └── LICENSE
 ```
