@@ -1,6 +1,6 @@
-# Task Reporting Web App
+# Task Reporting Web Application
 
-A comprehensive task management and reporting system for development teams.
+A comprehensive task management and reporting system designed for development teams, featuring role-based access control, real-time reporting, and detailed task tracking capabilities.
 
 ## Project Structure
 
@@ -54,34 +54,33 @@ task-reporting-webapp/
 └── LICENSE
 ```
 
-## Key Directories
-
-### Backend
-
-- `config/`: Configuration files for various services
-- `middleware/`: Express middleware for auth, admin, errors
-- `models/`: Prisma models and business logic
-- `routes/`: Express route handlers
-- `scripts/`: Utility scripts for development
-- `prisma/`: Database schema and migrations
-
-### Frontend
-
-- `app/`: Next.js pages and API routes
-- `components/`: Reusable React components
-- `contexts/`: React context providers
-- `hooks/`: Custom React hooks
-- `services/`: API integration services
-- `types/`: TypeScript type definitions
-
-
 ## 🌟 Features
 
-- **Task Management**: Submit, track, and manage daily development tasks
-- **Role-based Access**: Separate interfaces for developers and admins
-- **Real-time Reporting**: Generate daily, weekly, and monthly reports
-- **Missing Reports Tracking**: Visual calendar to track missing submissions
-- **API Documentation**: Interactive Swagger UI for API testing and documentation
+- **Task Management**
+
+  - Daily task submission and tracking
+  - Project-based organization
+  - Status tracking with multiple states
+  - Target achievement monitoring
+
+- **Role-based Access Control**
+
+  - Developer dashboard for task submission
+  - Admin panel for oversight and management
+  - Secure authentication and authorization
+
+- **Advanced Reporting**
+
+  - Daily, weekly, and monthly reports
+  - Missing report tracking
+  - Project-based filtering
+  - Export capabilities
+
+- **Developer Management**
+  - Team assignment (Web/App)
+  - Working days configuration
+  - Project allocation
+  - Profile management
 
 ## 🏗 Tech Stack
 
@@ -91,7 +90,8 @@ task-reporting-webapp/
 - **Framework**: Express.js
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: JWT
-- **API Documentation**: Swagger/OpenAPI
+- **Documentation**: Swagger/OpenAPI
+- **Security**: Rate limiting, input validation, password hashing
 
 ### Frontend
 
@@ -136,7 +136,7 @@ task-reporting-webapp/
    BACKEND_URL=http://localhost:5001
    ```
 
-3. **Install Dependencies**
+3. **Install Dependencies & Start Services**
 
    ```bash
    # Backend setup
@@ -145,7 +145,7 @@ task-reporting-webapp/
    npx prisma migrate dev
    npm run dev
 
-   # Frontend setup
+   # Frontend setup (in new terminal)
    cd ../frontend
    npm install
    npm run dev
@@ -157,23 +157,40 @@ task-reporting-webapp/
    npm run prisma:seed
    ```
 
-## 🛠 Development
+## 📚 API Documentation
 
-### Backend API (localhost:5001)
+Access the interactive API documentation at:
 
-- **Auth**: Authentication and user management
-- **Tasks**: Task CRUD operations
-- **Reports**: Report generation and analytics
-- **Developers**: Developer profile management
-- **Admins**: Administrative functions
+```
+http://localhost:5001/api-docs
+```
 
-### Frontend Pages (localhost:3000)
+### API Endpoints
 
-- **/login**: Authentication page
-- **/dashboard**: Developer's task dashboard
-- **/admin**: Admin control panel
-- **/task**: Task submission form
-- **/unauthorized**: Access denied page
+#### Auth Routes
+
+- POST /api/auth/login - User authentication
+- POST /api/auth/register-developer - Developer registration
+- POST /api/auth/register-admin - Admin registration
+
+#### Task Routes
+
+- GET /api/tasks - Get user's tasks
+- POST /api/tasks - Submit new task
+- PUT /api/tasks/:id - Update task
+- DELETE /api/tasks/:id - Delete task
+
+#### Report Routes
+
+- GET /api/reports - Generate reports
+- GET /api/reports/missing - Track missing reports
+
+#### Admin Routes
+
+- GET /api/developers - List all developers
+- POST /api/developers - Add new developer
+- PUT /api/developers/:id - Update developer
+- DELETE /api/developers/:id - Delete developer
 
 ## 👥 User Roles
 
@@ -191,21 +208,14 @@ task-reporting-webapp/
 - Track missing reports
 - Update profile
 
-## 📚 API Documentation
-
-Access the interactive API documentation at:
-
-```
-http://localhost:5001/api-docs
-```
-
-## 🛡️ Security
+## 🛡️ Security Features
 
 - JWT-based authentication
 - Role-based access control
-- Rate limiting
+- API rate limiting
 - Input validation
 - Password hashing
+- CORS configuration
 
 ## 🧰 Utility Scripts
 
@@ -226,13 +236,14 @@ node backend/prisma/seed.js
 
 - Deploy to any Node.js hosting (Heroku, DigitalOcean, etc.)
 - Ensure PostgreSQL database is accessible
-- Set environment variables
+- Configure environment variables
+- Set up CORS for production domain
 
 ### Frontend
 
 - Deploy to Vercel or any Next.js-compatible platform
 - Configure environment variables
-- Set up authentication
+- Set up authentication in production
 
 ## 🤝 Contributing
 
@@ -245,6 +256,14 @@ node backend/prisma/seed.js
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
+## ⚠️ Important Notes
+
+- Set strong passwords for admin and JWT secrets
+- Configure proper CORS settings in production
+- Regularly backup the database
+- Monitor API rate limits
+- Keep dependencies updated
+
 ---
 
-📝 **Note**: For any questions or support, please open an issue in the repository.
+📝 For questions or support, please open an issue in the repository.
