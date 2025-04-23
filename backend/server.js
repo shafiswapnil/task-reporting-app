@@ -9,6 +9,8 @@ import taskRoutes from './routes/tasks.js';
 import reportRoutes from './routes/reports.js';
 import { PrismaClient } from '@prisma/client';
 import createHttpError from 'http-errors';
+import swaggerUI from 'swagger-ui-express';
+import swaggerSpecs from './config/swagger.js';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +27,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Swagger UI route
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpecs));
 
 // Routes
 app.use('/api/auth', authRoutes);
