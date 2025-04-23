@@ -9,6 +9,48 @@ import { apiLimiter } from '../middleware/rateLimiter.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Task:
+ *       type: object
+ *       required:
+ *         - date
+ *         - project
+ *         - targetsGiven
+ *         - targetsAchieved
+ *         - status
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: Auto-generated ID of the task
+ *         date:
+ *           type: string
+ *           format: date
+ *           description: Date of the task
+ *         project:
+ *           type: string
+ *           description: Project name
+ *         targetsGiven:
+ *           type: string
+ *           description: Targets assigned for the task
+ *         targetsAchieved:
+ *           type: string
+ *           description: Targets completed for the task
+ *         status:
+ *           type: string
+ *           enum: [Completed, Unfinished, Pending, Dependent, PartiallyCompleted]
+ *           description: Current status of the task
+ *         developerId:
+ *           type: integer
+ *           description: ID of the developer assigned to the task
+ *         submittedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Timestamp when the task was submitted
+ */
+
 // Validation schemas
 const developerTaskSchema = Joi.object({
     date: Joi.string().required(),
@@ -42,7 +84,57 @@ const adminTaskSchema = Joi.object({
 // Developer Routes
 // -------------------
 
-// Submit a new task (Developer)
+/**
+ * @swagger
+ * /api/tasks:
+ *   post:
+ *     summary: Submit a new task (Developer)
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - project
+ *               - targetsGiven
+ *               - targetsAchieved
+ *               - status
+ *               - developerEmail
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               project:
+ *                 type: string
+ *               targetsGiven:
+ *                 type: string
+ *               targetsAchieved:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [Completed, Unfinished, Pending, Dependent, PartiallyCompleted]
+ *               developerEmail:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       201:
+ *         description: Task created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Task'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Developer not found
+ */
 router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
     try {
         const { date, project, targetsGiven, targetsAchieved, status, developerEmail } = req.body;
@@ -76,7 +168,26 @@ router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
     }
 });
 
-// Fetch submitted tasks (Developer)
+/**
+ * @swagger
+ * /api/tasks/submitted:
+ *   get:
+ *     summary: Get all submitted tasks for the logged-in developer
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of tasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Task'
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/submitted', apiLimiter, authMiddleware, async (req, res, next) => {
     try {
         const tasks = await prisma.task.findMany({
@@ -100,7 +211,77 @@ router.get('/submitted', apiLimiter, authMiddleware, async (req, res, next) => {
 // Admin Routes
 // -------------------
 
-// Create a new task (Admin)
+/**
+ * @swagger
+ * /api/tasks/admin:
+ *   get:
+ *     summary: Get all tasks (Admin only)
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all tasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Task'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ *   post:
+ *     summary: Create a new task (Admin only)
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - developerId
+ *               - date
+ *               - project
+ *               - role
+ *               - team
+ *               - targetsGiven
+ *               - targetsAchieved
+ *               - status
+ *             properties:
+ *               developerId:
+ *                 type: integer
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               project:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *               team:
+ *                 type: string
+ *                 enum: [web, app]
+ *               targetsGiven:
+ *                 type: string
+ *               targetsAchieved:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [Completed, Unfinished, Pending, Dependent, PartiallyCompleted]
+ *     responses:
+ *       201:
+ *         description: Task created successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
 router.post('/admin', apiLimiter, authMiddleware, adminMiddleware, async (req, res, next) => {
     try {
         // Validate request body
