@@ -7,6 +7,174 @@ import authMiddleware from '../middleware/authMiddleware.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Admin:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: Auto-generated ID
+ *         name:
+ *           type: string
+ *           description: Admin's full name
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Admin's email address
+ *         phone:
+ *           type: string
+ *           description: Admin's phone number
+ *         role:
+ *           type: string
+ *           default: admin
+ *           description: User role
+ */
+
+/**
+ * @swagger
+ * /api/admins:
+ *   get:
+ *     summary: Get all admins
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Admin'
+ *       401:
+ *         description: Unauthorized
+ *   post:
+ *     summary: Create a new admin
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Admin created successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       409:
+ *         description: Admin already exists
+ */
+
+/**
+ * @swagger
+ * /api/admins/{id}:
+ *   get:
+ *     summary: Get admin by ID
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Admin ID
+ *     responses:
+ *       200:
+ *         description: Admin details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Admin'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ *   put:
+ *     summary: Update admin
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Admin ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Admin updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ *   delete:
+ *     summary: Delete admin
+ *     tags: [Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Admin ID
+ *     responses:
+ *       200:
+ *         description: Admin deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ */
+
 // POST /admins - Add a new admin
 router.post('/', authMiddleware, async (req, res) => {
   try {
