@@ -10,7 +10,100 @@ import createHttpError from 'http-errors';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     LoginInput:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *         password:
+ *           type: string
+ *           format: password
+ *     RegisterDeveloperInput:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *         - phoneNumber
+ *         - fullTime
+ *         - team
+ *         - projects
+ *         - workingDays
+ *       properties:
+ *         name:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         password:
+ *           type: string
+ *           format: password
+ *         phoneNumber:
+ *           type: string
+ *         fullTime:
+ *           type: boolean
+ *         team:
+ *           type: string
+ *           enum: [web, app]
+ *         projects:
+ *           type: array
+ *           items:
+ *             type: string
+ *         workingDays:
+ *           type: array
+ *           items:
+ *             type: string
+ */
+
 // POST /api/auth/register-admin
+/**
+ * @swagger
+ * /api/auth/register-admin:
+ *   post:
+ *     summary: Register a new admin (Protected)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - phone
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Admin registered successfully
+ *       400:
+ *         description: Invalid input or admin already exists
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 router.post(
   '/register-admin',
   [
@@ -75,6 +168,41 @@ router.post(
 );
 
 // Login route
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login as admin or developer
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginInput'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 id:
+ *                   type: number
+ *                 email:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *       400:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
+ */
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -147,6 +275,37 @@ router.post('/login', async (req, res) => {
 });
 
 // POST /api/auth/register-developer
+/**
+ * @swagger
+ * /api/auth/register-developer:
+ *   post:
+ *     summary: Register a new developer
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterDeveloperInput'
+ *     responses:
+ *       201:
+ *         description: Developer registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 developer:
+ *                   type: object
+ *       400:
+ *         description: Invalid input or developer already exists
+ *       500:
+ *         description: Server error
+ */
 router.post(
   '/register-developer',
   [
