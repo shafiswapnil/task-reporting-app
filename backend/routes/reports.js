@@ -8,6 +8,117 @@ import createHttpError from 'http-errors';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Report:
+ *       type: object
+ *       properties:
+ *         date:
+ *           type: string
+ *           format: date
+ *           description: Date of the report
+ *         developer:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *         project:
+ *           type: string
+ *         targetsGiven:
+ *           type: string
+ *         targetsAchieved:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [Completed, Unfinished, Pending, Dependent, PartiallyCompleted]
+ */
+
+/**
+ * @swagger
+ * /api/reports:
+ *   get:
+ *     summary: Generate reports (Admin only)
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly, monthly]
+ *         description: Type of report to generate
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for report range
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for report range
+ *       - in: query
+ *         name: project
+ *         schema:
+ *           type: string
+ *         description: Filter by project name
+ *     responses:
+ *       200:
+ *         description: Report generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Report'
+ *       400:
+ *         description: Invalid input parameters
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ */
+
+/**
+ * @swagger
+ * /api/reports/missing:
+ *   get:
+ *     summary: Get missing reports for a developer
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: email
+ *         description: Developer's email
+ *     responses:
+ *       200:
+ *         description: List of dates with missing reports
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *                 format: date
+ *       400:
+ *         description: Invalid parameters
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Developer not found
+ */
+
 // GET /reports - Generate reports
 router.get('/', apiLimiter, authMiddleware, async (req, res, next) => {
   try {
