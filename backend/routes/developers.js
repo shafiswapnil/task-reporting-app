@@ -10,6 +10,57 @@ import { apiLimiter } from '../middleware/rateLimiter.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Developer:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - phoneNumber
+ *         - fullTime
+ *         - team
+ *         - projects
+ *         - workingDays
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: Auto-generated ID
+ *         name:
+ *           type: string
+ *           description: Developer's full name
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Developer's email address
+ *         phoneNumber:
+ *           type: string
+ *           description: Developer's phone number
+ *         fullTime:
+ *           type: boolean
+ *           description: Whether the developer is full-time
+ *         team:
+ *           type: string
+ *           enum: [web, app]
+ *           description: Developer's team
+ *         projects:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: List of projects assigned to developer
+ *         workingDays:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: List of working days
+ *         role:
+ *           type: string
+ *           default: developer
+ *           description: User role
+ */
+
 const developerSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
@@ -20,6 +71,80 @@ const developerSchema = Joi.object({
   workingDays: Joi.array().items(Joi.string()).required(),
   password: Joi.string().min(6).required()
 });
+
+/**
+ * @swagger
+ * /api/developers:
+ *   get:
+ *     summary: Get all developers
+ *     tags: [Developers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all developers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Developer'
+ *       401:
+ *         description: Unauthorized
+ *   post:
+ *     summary: Create a new developer
+ *     tags: [Developers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - phoneNumber
+ *               - fullTime
+ *               - team
+ *               - projects
+ *               - workingDays
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               phoneNumber:
+ *                 type: string
+ *               fullTime:
+ *                 type: boolean
+ *               team:
+ *                 type: string
+ *                 enum: [web, app]
+ *               projects:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               workingDays:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Developer created successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       409:
+ *         description: Developer already exists
+ */
 
 // POST / - Add a new developer
 router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
@@ -48,6 +173,91 @@ router.post('/', apiLimiter, authMiddleware, async (req, res, next) => {
     next(err);
   }
 });
+
+/**
+ * @swagger
+ * /api/developers/{id}:
+ *   get:
+ *     summary: Get developer by ID
+ *     tags: [Developers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Developer ID
+ *     responses:
+ *       200:
+ *         description: Developer details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Developer'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Developer not found
+ *   put:
+ *     summary: Update developer
+ *     tags: [Developers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Developer ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phoneNumber:
+ *                 type: string
+ *               fullTime:
+ *                 type: boolean
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Developer updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Developer not found
+ *   delete:
+ *     summary: Delete developer
+ *     tags: [Developers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Developer ID
+ *     responses:
+ *       200:
+ *         description: Developer deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Developer not found
+ */
 
 // GET / - Get all developers
 router.get('/', authMiddleware, async (req, res) => {
