@@ -1,283 +1,251 @@
 # Task Reporting Web App
 
-A full-stack web application for daily/weekly/monthly task reporting, management, and analytics for developers and admins. Built with **Next.js** (frontend) and **Node.js/Express** (backend), using **Prisma** ORM and a relational database.
+A comprehensive task management and reporting system for development teams.
 
----
+# Project Structure
 
-## Table of Contents
-
-- [Features](#features)
-- [Architecture Overview](#architecture-overview)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Setup Instructions](#setup-instructions)
-  - [1. Prerequisites](#1-prerequisites)
-  - [2. Clone the Repository](#2-clone-the-repository)
-  - [3. Environment Variables](#3-environment-variables)
-  - [4. Database Setup & Migration](#4-database-setup--migration)
-  - [5. Seeding the Database](#5-seeding-the-database)
-  - [6. Running the Backend](#6-running-the-backend)
-  - [7. Running the Frontend](#7-running-the-frontend)
-- [Backend API Overview](#backend-api-overview)
-- [Frontend Overview](#frontend-overview)
-- [Authentication & Authorization](#authentication--authorization)
-- [Admin & Developer Roles](#admin--developer-roles)
-- [Scripts](#scripts)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## Features
-
-- **User Authentication**: JWT-based login for both Admins and Developers.
-- **Role-based Access**: Admins can manage all tasks; Developers can manage their own.
-- **Task Management**: Create, update, delete, and view tasks.
-- **Reporting**: Generate daily, weekly, and monthly reports.
-- **Missing Reports**: Calendar view for missing task submissions.
-- **Rate Limiting & Security**: API rate limiting, error handling, and secure password storage.
-- **Modern UI**: Responsive, themeable frontend with Next.js and Tailwind CSS.
-
----
-
-## Architecture Overview
-
-- **Backend**: Node.js/Express REST API, Prisma ORM, JWT authentication, role-based middleware.
-- **Frontend**: Next.js (React), API routes for server-side logic, NextAuth for session management.
-- **Database**: Relational (PostgreSQL recommended), managed via Prisma schema and migrations.
-
----
-
-## Tech Stack
-
-- **Frontend**: Next.js, React, Tailwind CSS, NextAuth, Axios
-- **Backend**: Node.js, Express, Prisma, JWT, bcrypt, Joi, dotenv
-- **Database**: PostgreSQL (or compatible)
-- **Other**: Vercel (optional deployment), Docker (optional)
-
----
-
-## Project Structure
-
-\`\`\`
+```
 task-reporting-webapp/
-│
 ├── backend/
-│ ├── app.js, server.js
-│ ├── routes/ # Express route handlers (auth, tasks, reports, developers, admin)
-│ ├── models/ # Prisma-based models (Admin, Developer)
-│ ├── middleware/ # Auth, admin, error, rate limiter
-│ ├── prisma/ # schema.prisma, migrations, seed.js
-│ └── scripts/ # Utility scripts (reset password, create test user)
+│   ├── config/
+│   │   └── swagger.js         # Swagger API documentation config
+│   ├── middleware/
+│   │   ├── authMiddleware.js  # JWT authentication
+│   │   ├── adminMiddleware.js # Admin role verification
+│   │   ├── errorHandler.js    # Global error handling
+│   │   └── rateLimiter.js    # API rate limiting
+│   ├── models/
+│   │   ├── Admin.js          # Admin model & methods
+│   │   └── Developer.js      # Developer model & methods
+│   ├── prisma/
+│   │   ├── schema.prisma     # Database schema
+│   │   ├── seed.js          # Database seeding
+│   │   └── migrations/      # Database migrations
+│   ├── routes/
+│   │   ├── admin.js         # Admin routes
+│   │   ├── auth.js         # Authentication routes
+│   │   ├── developers.js   # Developer management
+│   │   ├── reports.js      # Reporting endpoints
+│   │   └── tasks.js        # Task management
+│   ├── scripts/
+│   │   ├── createTestDeveloper.js
+│   │   └── resetAdminPassword.js
+│   ├── server.js           # Main application entry
+│   └── package.json
 │
 ├── frontend/
-│ ├── src/
-│ │ ├── app/ # Next.js app directory (pages, layouts, API routes)
-│ │ ├── components/ # React components (forms, lists, UI)
-│ │ ├── contexts/ # React context providers
-│ │ ├── hooks/ # Custom React hooks
-│ │ ├── lib/ # Utility libraries (axios, helpers)
-│ │ ├── services/ # API service functions
-│ │ └── types/ # TypeScript types
-│ ├── public/ # Static assets
-│ ├── tailwind.config.ts, postcss.config.js
-│ └── README.md
+│   ├── src/
+│   │   ├── app/           # Next.js app directory
+│   │   │   ├── admin/     # Admin dashboard
+│   │   │   ├── api/       # API route handlers
+│   │   │   ├── dashboard/ # Developer dashboard
+│   │   │   ├── login/     # Authentication
+│   │   │   └── task/      # Task management
+│   │   ├── components/    # React components
+│   │   ├── contexts/      # React contexts
+│   │   ├── hooks/        # Custom hooks
+│   │   ├── lib/          # Utility functions
+│   │   ├── services/     # API services
+│   │   └── types/        # TypeScript types
+│   ├── public/           # Static assets
+│   └── package.json
 │
+├── docs/                 # Documentation
+├── README.md
 └── LICENSE
-\`\`\`
+```
 
----
+## Key Directories
 
-## Setup Instructions
+### Backend
 
-### 1. Prerequisites
+- `config/`: Configuration files for various services
+- `middleware/`: Express middleware for auth, admin, errors
+- `models/`: Prisma models and business logic
+- `routes/`: Express route handlers
+- `scripts/`: Utility scripts for development
+- `prisma/`: Database schema and migrations
+
+### Frontend
+
+- `app/`: Next.js pages and API routes
+- `components/`: Reusable React components
+- `contexts/`: React context providers
+- `hooks/`: Custom React hooks
+- `services/`: API integration services
+- `types/`: TypeScript type definitions
+
+
+## 🌟 Features
+
+- **Task Management**: Submit, track, and manage daily development tasks
+- **Role-based Access**: Separate interfaces for developers and admins
+- **Real-time Reporting**: Generate daily, weekly, and monthly reports
+- **Missing Reports Tracking**: Visual calendar to track missing submissions
+- **API Documentation**: Interactive Swagger UI for API testing and documentation
+
+## 🏗 Tech Stack
+
+### Backend
+
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT
+- **API Documentation**: Swagger/OpenAPI
+
+### Frontend
+
+- **Framework**: Next.js 14 (App Router)
+- **Authentication**: NextAuth.js
+- **Styling**: Tailwind CSS
+- **State Management**: React Context
+- **HTTP Client**: Axios
+
+## 🚀 Getting Started
+
+### Prerequisites
 
 - Node.js (v18+ recommended)
-- npm, yarn, or pnpm
-- PostgreSQL (or compatible database)
-- [Optional] Docker
+- PostgreSQL database
+- Git
 
-### 2. Clone the Repository
+### Installation
 
-\`\`\`bash
-git clone <repo-url>
-cd task-reporting-webapp
-\`\`\`
+1. **Clone the Repository**
 
-### 3. Environment Variables
+   ```bash
+   git clone <repo-url>
+   cd task-reporting-webapp
+   ```
 
-Create \`.env\` files in both \`backend/\` and \`frontend/\` directories.
+2. **Set Up Environment Variables**
 
-#### Backend \`.env\` example:
+   Backend (.env):
 
-\`\`\`
-DATABASE_URL=postgresql://user:password@localhost:5432/task_reporting
-JWT_SECRET=your_jwt_secret
-FRONTEND_URL=http://localhost:3000
-\`\`\`
+   ```
+   DATABASE_URL=postgresql://user:password@localhost:5432/task_reporting
+   JWT_SECRET=your_jwt_secret
+   FRONTEND_URL=http://localhost:3000
+   ```
 
-#### Frontend \`.env\` example:
+   Frontend (.env):
 
-\`\`\`
-NEXT_PUBLIC_API_URL=http://localhost:5001
-NEXTAUTH_SECRET=your_nextauth_secret
-BACKEND_URL=http://localhost:5001
-\`\`\`
+   ```
+   NEXT_PUBLIC_API_URL=http://localhost:5001
+   NEXTAUTH_SECRET=your_nextauth_secret
+   BACKEND_URL=http://localhost:5001
+   ```
 
-### 4. Database Setup & Migration
+3. **Install Dependencies**
 
-Navigate to the backend directory:
+   ```bash
+   # Backend setup
+   cd backend
+   npm install
+   npx prisma migrate dev
+   npm run dev
 
-\`\`\`bash
-cd backend
-npm install
-npx prisma migrate deploy
-\`\`\`
+   # Frontend setup
+   cd ../frontend
+   npm install
+   npm run dev
+   ```
 
-Or, for development:
+4. **Initialize Database**
+   ```bash
+   cd backend
+   npm run prisma:seed
+   ```
 
-\`\`\`bash
-npx prisma migrate dev
-\`\`\`
+## 🛠 Development
 
-### 5. Seeding the Database
+### Backend API (localhost:5001)
 
-Seed initial admin and developer users:
+- **Auth**: Authentication and user management
+- **Tasks**: Task CRUD operations
+- **Reports**: Report generation and analytics
+- **Developers**: Developer profile management
+- **Admins**: Administrative functions
 
-\`\`\`bash
-node prisma/seed.js
-\`\`\`
+### Frontend Pages (localhost:3000)
 
-You can also use utility scripts:
+- **/login**: Authentication page
+- **/dashboard**: Developer's task dashboard
+- **/admin**: Admin control panel
+- **/task**: Task submission form
+- **/unauthorized**: Access denied page
 
-\`\`\`bash
-node scripts/createTestDeveloper.js
-node scripts/resetAdminPassword.js
-\`\`\`
+## 👥 User Roles
 
-### 6. Running the Backend
+### Admin
 
-\`\`\`bash
-npm install
-npm run dev # or: node server.js
-\`\`\`
+- Manage developers and tasks
+- Generate and export reports
+- View all submissions
+- Reset passwords
 
-The backend will run on \`http://localhost:5001\`.
+### Developer
 
-### 7. Running the Frontend
+- Submit daily tasks
+- View personal submissions
+- Track missing reports
+- Update profile
 
-Open a new terminal:
+## 📚 API Documentation
 
-\`\`\`bash
-cd frontend
-npm install
-npm run dev
-\`\`\`
+Access the interactive API documentation at:
 
-The frontend will run on \`http://localhost:3000\`.
+```
+http://localhost:5001/api-docs
+```
 
----
+## 🛡️ Security
 
-## Backend API Overview
+- JWT-based authentication
+- Role-based access control
+- Rate limiting
+- Input validation
+- Password hashing
 
-- **Auth**: \`/api/auth/\`
-  - \`POST /login\` — Login as admin or developer
-  - \`POST /register-admin\` — Register admin
-  - \`POST /register-developer\` — Register developer
-- **Developers**: \`/api/developers/\`
-  - CRUD operations for developer profiles (admin only for some)
-- **Tasks**: \`/api/tasks/\`
-  - \`POST /\` — Submit task (developer)
-  - \`GET /submitted\` — Get developer's submitted tasks
-  - \`GET /admin\` — Get all tasks (admin)
-  - \`POST /admin\` — Create task (admin)
-  - \`PUT /admin/:id\` — Update task (admin)
-  - \`DELETE /admin/:id\` — Delete task (admin)
-- **Reports**: \`/api/reports/\`
-  - \`GET /\` — Generate reports (admin)
-  - \`GET /missing\` — Get missing reports for a developer
+## 🧰 Utility Scripts
 
-All routes are protected by JWT authentication and role-based middleware.
+```bash
+# Create test developer
+node backend/scripts/createTestDeveloper.js
 
----
+# Reset admin password
+node backend/scripts/resetAdminPassword.js
 
-## Frontend Overview
+# Seed database
+node backend/prisma/seed.js
+```
 
-- **Login Page**: \`/login\` — Authenticates user and sets session.
-- **Dashboard**: \`/dashboard\` — Developer's task submission and history.
-- **Admin Panel**: \`/admin\` — Admin can view, create, edit, and delete any task, generate reports, and export data.
-- **Task Submission**: \`/task\` — Submit daily/weekly tasks.
-- **Missing Reports Calendar**: Visualizes days with missing submissions.
-- **API Integration**: Uses Axios and Next.js API routes to communicate with backend.
+## 📦 Deployment
 
----
+### Backend
 
-## Authentication & Authorization
+- Deploy to any Node.js hosting (Heroku, DigitalOcean, etc.)
+- Ensure PostgreSQL database is accessible
+- Set environment variables
 
-- **JWT** is used for backend API authentication.
-- **NextAuth** is used on the frontend for session management.
-- **Role-based Middleware**:
-  - \`authMiddleware\` — Validates JWT and attaches user to request.
-  - \`adminMiddleware\` — Restricts certain routes to admins only.
+### Frontend
 
----
+- Deploy to Vercel or any Next.js-compatible platform
+- Configure environment variables
+- Set up authentication
 
-## Admin & Developer Roles
+## 🤝 Contributing
 
-- **Admin**:
-  - Can manage all tasks, developers, and generate reports.
-  - Can reset passwords and manage other admins.
-- **Developer**:
-  - Can submit, update, and delete their own tasks.
-  - Can view their own reports and missing days.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
----
+## 📄 License
 
-## Scripts
-
-- \`backend/scripts/createTestDeveloper.js\`: Creates a test developer.
-- \`backend/scripts/resetAdminPassword.js\`: Resets or creates an admin user.
-- \`backend/prisma/seed.js\`: Seeds the database with initial data.
-
-Run with:
-
-\`\`\`bash
-node scripts/createTestDeveloper.js
-node scripts/resetAdminPassword.js
-node prisma/seed.js
-\`\`\`
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Deployment
-
-### Deploying Frontend
-
-- The frontend is ready for deployment on [Vercel](https://vercel.com/) or any platform supporting Next.js.
-- See [Next.js deployment docs](https://nextjs.org/docs/app/building-your-application/deploying).
-
-### Deploying Backend
-
-- Deploy the backend to any Node.js-compatible server (Heroku, Render, DigitalOcean, etc.).
-- Ensure environment variables are set and the database is accessible.
-
----
-
-## Contributing
-
-1. Fork the repository.
-2. Create a new branch: \`git checkout -b feature/your-feature\`
-3. Make your changes and commit: \`git commit -m 'Add feature'\`
-4. Push to your fork: \`git push origin feature/your-feature\`
-5. Open a Pull Request.
-
----
-
-## License
-
-This project is licensed under the [MIT License](./LICENSE).
-
----
-
-**For more details, review the codebase and comments in each directory.** If you have questions or need help, please open an issue or contact the maintainer.
+📝 **Note**: For any questions or support, please open an issue in the repository.
