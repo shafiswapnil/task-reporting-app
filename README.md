@@ -2,6 +2,8 @@
 
 A comprehensive task management and reporting system designed for development teams, featuring role-based access control, real-time reporting, and detailed task tracking capabilities.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shafiswapnil/task-reporting-app)
+
 ## Project Structure
 
 ```
